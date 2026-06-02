@@ -4,8 +4,9 @@ import 'scales_screen.dart';
 import 'analytics_screen.dart';
 import 'smart_goal_screen.dart';
 import 'exercises_screen.dart';
+
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key}); // Конструктор виправлено тут
+  const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -37,19 +38,18 @@ class DashboardScreen extends StatelessWidget {
                       children: [
                         const Icon(Icons.person, color: Colors.blue, size: 28),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            patient.fullName,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
+                        Text(
+                          patient.name,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text("Вік: ${patient.birthDate}", style: const TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 12),
+                    Text("Вік: ${patient.age} років", style: const TextStyle(fontSize: 14)),
                     const SizedBox(height: 4),
-                    Text("Діагноз: [${patient.icdCode}] ${patient.icdDiagnosis}", 
-                        style: const TextStyle(fontWeight: FontWeight.w500)),
+                    Text("Палата: №${patient.roomNumber}", style: const TextStyle(fontSize: 14)),
+                    const SizedBox(height: 4),
+                    Text("Діагноз: ${patient.diagnosis}", style: const TextStyle(fontSize: 14, color: Colors.black87)),
                   ],
                 ),
               ),
@@ -68,54 +68,52 @@ class DashboardScreen extends StatelessWidget {
               mainAxisSpacing: 16,
               children: [
                 _buildMenuCard(
-            context,
-            "Шкали & Безпека",
-            Icons.analytics_rounded,
-            Colors.green,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ScalesScreen()),
-              );
-            },
-          ),
-          _buildMenuCard(
-            context,
-            "SMART Майстер",
-            Icons.psychology_rounded,
-            Colors.purple,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SmartGoalScreen()),
-              );
-            },
-          ),
-          _buildMenuCard(
-            context,
-            "Графіки динаміки",
-            Icons.show_chart_rounded,
-            Colors.blue,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
-              );
-            },
-          ),
-          _buildMenuCard(
-            context,
-            "База вправ ВІТ",
-            Icons.directions_run_rounded,
-            Colors.orange,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ExercisesScreen()),
-              );
-            },
-          ),
-}
+                  context,
+                  "Шкали & Безпека",
+                  Icons.analytics_rounded,
+                  Colors.green,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ScalesScreen()),
+                    );
+                  },
+                ),
+                _buildMenuCard(
+                  context,
+                  "SMART Майстер",
+                  Icons.psychology_rounded,
+                  Colors.purple,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SmartGoalScreen()),
+                    );
+                  },
+                ),
+                _buildMenuCard(
+                  context,
+                  "Графіки динаміки",
+                  Icons.show_chart_rounded,
+                  Colors.blue,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
+                    );
+                  },
+                ),
+                _buildMenuCard(
+                  context,
+                  "База вправ ВІТ",
+                  Icons.directions_run_rounded,
+                  Colors.orange,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ExercisesScreen()),
+                    );
+                  },
                 ),
               ],
             ),
@@ -137,19 +135,12 @@ class DashboardScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 36, color: color),
-              ),
+              Icon(icon, size: 40, color: color),
               const SizedBox(height: 12),
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ],
           ),
