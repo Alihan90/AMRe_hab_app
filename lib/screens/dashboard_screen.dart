@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/patient.dart';
-
+import 'scales_screen.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key}); // Конструктор виправлено тут
 
@@ -70,11 +70,11 @@ class DashboardScreen extends StatelessWidget {
                   Icons.analytics_rounded, 
                   Colors.green,
                   () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Модуль шкал буде підключено в наступному кроці")),
-                    );
-                  }
-                ),
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const ScalesScreen()),
+  );
+}
                 _buildMenuCard(
                   context, 
                   "SMART Майстер", 
