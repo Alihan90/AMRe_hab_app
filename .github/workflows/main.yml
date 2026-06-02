@@ -23,7 +23,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.2' # Надійна версія для стабільної збірки
+          flutter-version: '3.22.2'
           channel: 'stable'
 
       - name: Get Flutter dependencies
@@ -31,10 +31,10 @@ jobs:
 
       - name: Auto-repair Android target SDK
         run: |
-          # Якщо папки android немає в репозиторії, створюємо її базову структуру через Flutter
+          # Створюємо платформу з правильною назвою проекту маленькими літерами
           if [ ! -d "android" ]; then
-            echo "Папку android не знайдено. Створюємо шаблон..."
-            flutter create . --platforms=android
+            echo "Папку android не знайдено. Створюємо шаблон із правильною назвою..."
+            flutter create . --platforms=android --project-name=amre_hab_app
           fi
           
           # Примусово міняємо версію SDK на 34 у всіх конфігураціях Gradle
