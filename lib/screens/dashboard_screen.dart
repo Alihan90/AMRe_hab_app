@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import '../models/patient.dart';
 
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({Key? super.key}) : super(key: super);
+  const DashboardScreen({super.key}); // Конструктор виправлено тут
 
   @override
   Widget build(BuildContext context) {
-    // Беремо нашого тестового пацієнта для демонстрації на екрані
     final patient = Patient.mockPatient;
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B), // Глибокий медичний темно-синій
+        backgroundColor: const Color(0xFF1E293B),
         title: const Text(
           "ВІТ-Реабілітація",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -23,7 +22,6 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Картка поточного пацієнта
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -59,7 +57,6 @@ class DashboardScreen extends StatelessWidget {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
             ),
             const SizedBox(height: 16),
-            // Сітка з кнопками-модулями
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
