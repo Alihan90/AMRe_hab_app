@@ -71,8 +71,8 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
                     Text("Діагноз МКХ: ${patient.icdDiagnosis}", style: const TextStyle(fontSize: 13, color: Colors.black87)),
                     if (patient.currentSmartGoal.isNotEmpty) ...[
                       const Divider(height: 20),
-                      const Text("Поточна ціль:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 12)),
-                      Text(patient.currentSmartGoal, style: const TextStyle(fontSize: 13, italic: true)),
+                      const Text("Поточна ціль / Логи:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 12)),
+                      Text(patient.currentSmartGoal, style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
                     ]
                   ],
                 ),
@@ -88,7 +88,7 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               children: [
-                _buildMenuCard(context, "Шкали: IMS та MRC", Icons.gavel_rounded, Colors.green, () {
+                _buildMenuCard(context, "Провести тест (Шкали)", Icons.gavel_rounded, Colors.green, () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => ScalesScreen(patient: patient)));
                 }),
                 _buildMenuCard(context, "SMART Майстер", Icons.psychology_rounded, Colors.purple, () {
@@ -97,7 +97,7 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
                 _buildMenuCard(context, "Графіки динаміки", Icons.show_chart_rounded, Colors.blue, () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => AnalyticsScreen(patient: patient)));
                 }),
-                _buildMenuCard(context, "База вправ ВІТ", Icons.directions_run_rounded, Colors.orange, () {
+                _buildMenuCard(context, "Base вправ ВІТ", Icons.directions_run_rounded, Colors.orange, () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const ExercisesScreen()));
                 }),
               ],
