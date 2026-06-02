@@ -2,43 +2,52 @@ name: Build Flutter Android APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Flutter
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.22.2' # Надійна версія для стабільної збірки
           channel: 'stable'
 
-      - name: Recreate Android Platform Files
-        run: |
-          flutter config --enable-android
-          flutter create . --platforms android
+      - name: Get Flutter dependencies
+        run: flutter pub get
 
-      - name: Get Dependencies
+      - name: Auto-repair Android target SDK
         run: |
-          flutter clean
-          flutter pub get
+          # Якщо папки android немає в репозиторії, створюємо її базову структуру через Flutter
+          if [ ! -d "android" ]; then
+            echo "Папку android не знайдено. Створюємо шаблон..."
+            flutter create . --platforms=android
+          fi
+          
+          # Примусово міняємо версію SDK на 34 у всіх конфігураціях Gradle
+          find android/ -name "build.gradle" -exec sed -i 's/compileSdkVersion 33/compileSdkVersion 34/g' {} +
+          find android/ -name "build.gradle" -exec sed -i 's/targetSdkVersion 33/targetSdkVersion 34/g' {} +
+          find android/ -name "build.gradle" -exec sed -i 's/compileSdk 33/compileSdk 34/g' {} +
+          find android/ -name "build.gradle" -exec sed -i 's/targetSdk 33/targetSdk 34/g' {} +
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Build APK Release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
+          name: vit-rehab-app-release
           path: build/app/outputs/flutter-apk/app-release.apk
