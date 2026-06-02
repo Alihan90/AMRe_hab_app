@@ -17,9 +17,6 @@ class DashboardScreen extends StatelessWidget {
 Вік: ${patient.age} р. Палата: ${patient.roomNumber}
 Діагноз МКХ: ${patient.icdDiagnosis}
 ----------------------------------
-Поточний статус шкали IMS: ${patient.imsHistory.last.toInt()} балів.
-Поточна сила м'язів MRC-SumScore: ${patient.mrcHistory.last.toInt()}/60 балів.
-----------------------------------
 🎯 Затверджена SMART-ціль:
 ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.currentSmartGoal}
 ----------------------------------
@@ -39,7 +36,7 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
             onPressed: _sharePatientReport,
-            tooltip: "Поділитися звітом у месенджерах",
+            tooltip: "Поділитися звітом",
           )
         ],
       ),
