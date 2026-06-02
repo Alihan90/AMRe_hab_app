@@ -68,51 +68,53 @@ class DashboardScreen extends StatelessWidget {
               mainAxisSpacing: 16,
               children: [
                 _buildMenuCard(
-                  context, 
-                  "Шкали & Безпека", 
-                  Icons.analytics_rounded, 
-                  Colors.green,
-                  () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const ScalesScreen()),
-  );
-}
-               _buildMenuCard(
-                  context, 
-                  "SMART Майстер", 
-                  Icons.psychology_rounded, 
-                  Colors.purple,
-                  () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const SmartGoalScreen()),
-                    );
-                  }
-                ),
-                ),
-                _buildMenuCard(
-                  context, 
-                  "Графіки динаміки", 
-                  Icons.show_chart_rounded, 
-                  Colors.blue,
-                  () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
-  );
-}
-                ),
-                _buildMenuCard(
-                  context, 
-                  "База вправ ВІТ", 
-                  Icons.directions_run_rounded, 
-                  Colors.orange,
-                  () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const ExercisesScreen()),
-  );
+            context,
+            "Шкали & Безпека",
+            Icons.analytics_rounded,
+            Colors.green,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ScalesScreen()),
+              );
+            },
+          ),
+          _buildMenuCard(
+            context,
+            "SMART Майстер",
+            Icons.psychology_rounded,
+            Colors.purple,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SmartGoalScreen()),
+              );
+            },
+          ),
+          _buildMenuCard(
+            context,
+            "Графіки динаміки",
+            Icons.show_chart_rounded,
+            Colors.blue,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
+              );
+            },
+          ),
+          _buildMenuCard(
+            context,
+            "База вправ ВІТ",
+            Icons.directions_run_rounded,
+            Colors.orange,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ExercisesScreen()),
+              );
+            },
+          ),
 }
                 ),
               ],
