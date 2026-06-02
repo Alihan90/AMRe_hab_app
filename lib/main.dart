@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: const Color(0xFF1E293B),
-        useMaterialDesign: true,
+        useMaterial3: true, // Виправлено тут!
       ),
       home: const MainListScreen(),
     );
