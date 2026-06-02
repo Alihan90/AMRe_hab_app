@@ -1,4 +1,3 @@
-Dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -58,7 +57,7 @@ class MainDashboardScreen extends StatelessWidget {
                   _buildMenuCard(context, "SMART Майстер", Icons.psychology_rounded, const SmartConstructorScreen(), Colors.purple),
                   _buildMenuCard(context, "Шкала IMS", Icons.accessibility_new_rounded, const ImsTestingScreen(), Colors.green),
                   _buildMenuCard(context, "Сила MRC", Icons.fitness_center_rounded, const MrcSumScoreScreen(), Colors.teal),
-                  _buildMenuCard(context, "База Вправ", Icons.directions_run_rounded, const ExerciseBaseScreen(currentPatientIms: 3), Colors.orange),
+                  _buildMenuCard(context, "Base Вправ", Icons.directions_run_rounded, const ExerciseBaseScreen(currentPatientIms: 3), Colors.orange),
                   _buildMenuCard(context, "Аналітика", Icons.trending_up_rounded, const PatientAnalyticsScreen(), Colors.indigo),
                 ],
               ),
@@ -179,7 +178,7 @@ class _PatientCardsScreenState extends State<PatientCardsScreen> {
                 icon: const Icon(Icons.share),
                 label: const Text("Експорт в PDF / Надіслати"),
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("PDF сформовано та надіслано!")));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("PDF сформовано!")));
                 },
               ),
             )
@@ -437,7 +436,7 @@ class EpicrisisPreviewScreen extends StatelessWidget {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("КНП 'ОБЛАСНА КЛІНІЧНА LІКАРНЯ' | ФОРМА № 025/о", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                Text("КНП 'ОБЛАСНА КЛІНІЧНА ЛІКАРНЯ' | ФОРМА № 025/о", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                 Divider(color: Colors.black),
                 Center(child: Text("РЕАБІЛІТАЦІЙНИЙ ВИСНОВОК (ЕПІКРИЗ)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
                 SizedBox(height: 12),
