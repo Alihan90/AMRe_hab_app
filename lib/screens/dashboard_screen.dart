@@ -3,6 +3,7 @@ import '../models/patient.dart';
 import 'scales_screen.dart';
 import 'analytics_screen.dart';
 import 'smart_goal_screen.dart';
+import 'exercises_screen.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key}); // Конструктор виправлено тут
 
@@ -107,7 +108,12 @@ class DashboardScreen extends StatelessWidget {
                   "База вправ ВІТ", 
                   Icons.directions_run_rounded, 
                   Colors.orange,
-                  () {}
+                  () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const ExercisesScreen()),
+  );
+}
                 ),
               ],
             ),
