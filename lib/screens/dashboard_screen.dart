@@ -38,18 +38,16 @@ class DashboardScreen extends StatelessWidget {
                       children: [
                         const Icon(Icons.person, color: Colors.blue, size: 28),
                         const SizedBox(width: 8),
-                        Text(
-                          patient.name,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: Text(
+                            patient.fullName,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Text("Вік: ${patient.age} років", style: const TextStyle(fontSize: 14)),
-                    const SizedBox(height: 4),
-                    Text("Палата: №${patient.roomNumber}", style: const TextStyle(fontSize: 14)),
-                    const SizedBox(height: 4),
-                    Text("Діагноз: ${patient.diagnosis}", style: const TextStyle(fontSize: 14, color: Colors.black87)),
+                    Text("Діагноз: ${patient.icdDiagnosis}", style: const TextStyle(fontSize: 14, color: Colors.black87)),
                   ],
                 ),
               ),
