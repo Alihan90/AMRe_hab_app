@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 
 void main() {
   runApp(const VitRehabApp());
@@ -58,7 +57,7 @@ class MainDashboardScreen extends StatelessWidget {
                   _buildMenuCard(context, "Шкала IMS", Icons.accessibility_new_rounded, const ImsTestingScreen(), Colors.green),
                   _buildMenuCard(context, "Сила MRC", Icons.fitness_center_rounded, const MrcSumScoreScreen(), Colors.teal),
                   _buildMenuCard(context, "Base Вправ", Icons.directions_run_rounded, const ExerciseBaseScreen(currentPatientIms: 3), Colors.orange),
-                  _buildMenuCard(context, "Аналітика", Icons.trending_up_rounded, const PatientAnalyticsScreen(), Colors.indigo),
+                  _buildMenuCard(context, "Статус системи", Icons.gpp_good_rounded, const SystemStatusScreen(), Colors.indigo),
                 ],
               ),
             ),
@@ -379,37 +378,21 @@ class ExerciseBaseScreen extends StatelessWidget {
   }
 }
 
-class PatientAnalyticsScreen extends StatelessWidget {
-  const PatientAnalyticsScreen({Key? super.key}) : super(key: super);
+class SystemStatusScreen extends StatelessWidget {
+  const SystemStatusScreen({Key? super.key}) : super(key: super);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.indigo, title: const Text("Графіки відновлення")),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
+      appBar: AppBar(backgroundColor: Colors.indigo, title: const Text("Статус автономності")),
+      body: const Padding(
+        padding: EdgeInsets.all(20.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("Динаміка індексу мобільності IMS по днях госпіталізації:", style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 250,
-              child: LineChart(
-                LineChartData(
-                  borderData: FlBorderData(show: true),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: [const FlSpot(1, 0), const FlSpot(3, 1), const FlSpot(5, 3), const FlSpot(7, 5), const FlSpot(10, 8)],
-                      isCurved: true,
-                      color: Colors.orange,
-                      barWidth: 4,
-                    )
-                  ]
-                )
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text("📈 Середній темп приросту позитивний, програма реабілітації ефективна.", style: TextStyle(fontStyle: FontStyle.italic, color: Colors.green)),
+            Icon(Icons.offline_bolt_rounded, size: 80, color: Colors.green),
+            SizedBox(height: 20),
+            Text("Додаток працює в автономному режимі (PWA). Інтернет не потрібен.", textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
