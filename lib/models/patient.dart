@@ -1,45 +1,64 @@
+import 'dart:convert';
+
 class Patient {
   String id;
   String fullName;
-  String birthDate;
-  String icdCode;
+  String age;
+  String roomNumber;
   String icdDiagnosis;
   
-  // Історія тестувань для побудови графіків динаміки у ВІТ
-  List<double> imsHistory; // Рівні мобільності, наприклад: [0.0, 1.0, 2.0, 3.0]
-  List<int> mrcHistory;    // Бали сили м'язів, наприклад: [24, 36, 48, 52]
-  List<DateTime> sessionDates; // Дати оглядів
-
-  String smartGoal;
+  // Історія оцінок для графіків
+  List<double> mrcHistory;
+  List<double> imsHistory;
+  List<DateTime> sessionDates;
+  
+  // Актуальні цілі та нотатки
+  String currentSmartGoal;
 
   Patient({
     required this.id,
     required this.fullName,
-    required this.birthDate,
-    required this.icdCode,
+    required this.age,
+    required this.roomNumber,
     required this.icdDiagnosis,
-    required this.imsHistory,
     required this.mrcHistory,
+    required this.imsHistory,
     required this.sessionDates,
-    this.smartGoal = "",
+    this.currentSmartGoal = "",
   });
 
-  // Шаблон пацієнта для демонстрації інтерфейсу та тестів
-  static Patient get mockPatient => Patient(
-    id: "1",
-    fullName: "Коваленко Олександр Петрович",
-    birthDate: "14.05.1972",
-    icdCode: "I63.3",
-    icdDiagnosis: "Ішемічний інсульт з лівобічним геміпарезом",
-    imsHistory: [0.0, 1.0, 2.0, 2.0, 3.0],
-    mrcHistory: [24, 30, 42, 44, 50],
-    sessionDates: [
-      DateTime.now().subtract(const Duration(days: 4)),
-      DateTime.now().subtract(const Duration(days: 3)),
-      DateTime.now().subtract(const Duration(days: 2)),
-      DateTime.now().subtract(const Duration(days: 1)),
-      DateTime.now(),
-    ],
-    smartGoal: "Пацієнт зможе самостійно переходити в положення сидіння на краю ліжка з утриманням балансу протягом 5 хвилин без підтримки до кінця тижня.",
-  );
+  // Конвертуємо в JSON для збереження в пам'ять телефона
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'fullName': fullName,
+      'age': age,
+      'roomNumber': roomNumber,
+      'icdDiagnosis': icdDiagnosis,
+      'mrcHistory': mrcHistory,
+      'imsHistory': imsHistory,
+      'sessionDates': sessionDates.map((d) => d.toIso8601String()).toList(),
+      'currentSmartGoal': currentSmartGoal,
+    };
+  }
+
+  // Відновлюємо пацієнта з пам'яті телефона
+  factory Patient.fromMap(Map<String, dynamic> map) {
+    return Patient(
+      id: map['id'] ?? '',
+      fullName: map['fullName'] ?? '',
+      age: map['age'] ?? '',
+      roomNumber: map['roomNumber'] ?? '',
+      icdDiagnosis: map['icdDiagnosis'] ?? '',
+      mrcHistory: List<double>.from(map['mrcHistory'] ?? []),
+      imsHistory: List<double>.from(map['imsHistory'] ?? []),
+      sessionDates: (map['sessionDates'] as List? ?? [])
+          .map((d) => DateTime.parse(d))
+          .toList(),
+      currentSmartGoal: map['currentSmartGoal'] ?? '',
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+  factory Patient.fromJson(String source) => Patient.fromMap(json.decode(source));
 }
