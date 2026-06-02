@@ -7,7 +7,7 @@ import 'scale_cpax_page.dart';
 import 'scale_cpot_page.dart';
 import 'scale_stroke_pages.dart';
 import 'scale_mwt_page.dart';
-import 'scale_goniometry_page.dart'; // Новий імпорт
+import 'scale_goniometry_page.dart';
 
 class ScalesScreen extends StatelessWidget {
   final Patient? patient;
@@ -19,7 +19,7 @@ class ScalesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(patient == null ? "Інструментальні Шкали" : "Оцінка: ${patient!.fullName}", 
+        title: Text(patient == null ? "Інструментальні Шкали" : "Оцінка пацієнта", 
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
       ),
       body: ListView(
@@ -27,7 +27,7 @@ class ScalesScreen extends StatelessWidget {
         children: [
           if (patient != null)
             Padding(
-              padding: const EdgeInsets.bottom(8.0),
+              padding: const EdgeInsets.only(bottom: 8.0),
               child: Text("Тестування для: ${patient!.fullName}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
             ),
 
@@ -59,7 +59,7 @@ class ScalesScreen extends StatelessWidget {
           _buildCard(context, "Модифікована шкала Ашворт (MAS)", "Оцінка м'язового тонусу та ступеня спастичності суглобів (0, 1, 1+, 2, 3, 4).", Colors.indigo, 
             () => Navigator.push(context, MaterialPageRoute(builder: (context) => NeuroScalePage(type: "Ashworth", patient: patient)))),
 
-          _buildSectionHeader("🫁 Кардіо-респіраторна система"),
+          _buildSectionHeader("ань Кардіо-респіраторна система"),
           _buildCard(context, "Тест 6-хвилинної ходьби (6MWT) + Шкала Борга", "Розрахунок належної відстані за Enright, оцінка задишки та толерантності до навантаження.", Colors.deepOrange, 
             () => Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleMwtPage(patient: patient)))),
         ],
