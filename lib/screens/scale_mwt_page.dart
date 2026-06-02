@@ -23,7 +23,7 @@ class _ScaleMwtPageState extends State<ScaleMwtPage> {
   String _calculationResult = "";
 
   final List<Map<String, dynamic>> _borgScale = [
-    {"val": 0.0, "txt": "0 - Взагалі не відчувається (Спокій)"},
+    {"val": 0.0, "txt": "0 - Взагалі не відчується (Спокій)"},
     {"val": 0.5, "txt": "0.5 - Дуже-дуже легка (Ледве помітна)"},
     {"val": 1.0, "txt": "1 - Дуже легка задишка"},
     {"val": 2.0, "txt": "2 - Легка задишка"},
@@ -121,7 +121,7 @@ class _ScaleMwtPageState extends State<ScaleMwtPage> {
             SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey), onPressed: _calculateEnright, child: const Text("Розрахувати показники за Enright", style: TextStyle(color: Colors.white)))),
             if (_calculationResult.isNotEmpty) ...[
               const SizedBox(height: 15),
-              Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)), child: Text(_calculationResult, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blueDeep))),
+              Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)), child: Text(_calculationResult, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue))),
             ],
             const SizedBox(height: 20),
             if (widget.patient != null)
