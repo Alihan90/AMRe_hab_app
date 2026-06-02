@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/patient.dart';
 import 'scales_screen.dart';
+import 'analytics_screen.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key}); // Конструктор виправлено тут
 
@@ -87,7 +88,12 @@ class DashboardScreen extends StatelessWidget {
                   "Графіки динаміки", 
                   Icons.show_chart_rounded, 
                   Colors.blue,
-                  () {}
+                  () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
+  );
+}
                 ),
                 _buildMenuCard(
                   context, 
