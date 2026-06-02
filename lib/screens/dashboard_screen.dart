@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/patient.dart';
 import 'scales_screen.dart';
 import 'analytics_screen.dart';
+import 'smart_goal_screen.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key}); // Конструктор виправлено тут
 
@@ -76,12 +77,18 @@ class DashboardScreen extends StatelessWidget {
     MaterialPageRoute(builder: (context) => const ScalesScreen()),
   );
 }
-                _buildMenuCard(
+               _buildMenuCard(
                   context, 
                   "SMART Майстер", 
                   Icons.psychology_rounded, 
                   Colors.purple,
-                  () {}
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SmartGoalScreen()),
+                    );
+                  }
+                ),
                 ),
                 _buildMenuCard(
                   context, 
