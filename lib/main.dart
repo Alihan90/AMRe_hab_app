@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/main_list_screen.dart';
 
 void main() {
-  runApp(const VitRehabApp());
+  runApp(const MyApp());
 }
 
-class VitRehabApp extends StatelessWidget {
-  const VitRehabApp({super.key}); // Спрощений та повністю правильний конструктор
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,15 +14,10 @@ class VitRehabApp extends StatelessWidget {
       title: 'ВІТ Реабілітація',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        useMaterial3: true,
         primaryColor: const Color(0xFF1E293B),
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E293B),
-          primary: const Color(0xFF1E293B),
-        ),
+        useMaterialDesign: true,
       ),
-      home: const DashboardScreen(),
+      home: const MainListScreen(),
     );
   }
 }
