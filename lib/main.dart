@@ -6,7 +6,7 @@ void main() {
 }
 
 class VitRehabApp extends StatelessWidget {
-  const VitRehabApp({Key? super.key}) : super(key: super);
+  const VitRehabApp({super.key}); // Спрощений та повністю правильний конструктор
 
   @override
   Widget build(BuildContext context) {
@@ -14,15 +14,15 @@ class VitRehabApp extends StatelessWidget {
       title: 'ВІТ Реабілітація',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        useMaterial3: true, // Включаємо сучасний дизайн Material 3
+        useMaterial3: true,
         primaryColor: const Color(0xFF1E293B),
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC), // Світле приємне тло
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF1E293B),
           primary: const Color(0xFF1E293B),
         ),
       ),
-      home: const DashboardScreen(), // Запускаємо наш створений головний екран
+      home: const DashboardScreen(),
     );
   }
 }
