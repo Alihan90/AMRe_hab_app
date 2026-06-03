@@ -21,15 +21,17 @@ class _TestExecutorScreenState extends State<TestExecutorScreen> {
     for (var question in widget.scale.questions) {
       if (question.options.isNotEmpty) {
         _answers[question.id] = question.options.first.score;
+      } else {
+        _answers[question.id] = "";
       }
     }
   }
 
   // Розрахунок загального результату
   int _calculateTotalScore() {
-    int total = 0;
     if (widget.scale.testType == 'inputs') return 0; // Для числових тестів логіка інша
     
+    int total = 0;
     _answers.forEach((key, value) {
       if (value is int) {
         total += value;
@@ -38,7 +40,7 @@ class _TestExecutorScreenState extends State<TestExecutorScreen> {
     return total;
   }
 
-  // Автоматична клінічна інтерпретація результату згідно з вимогами МОЗ
+  // Автоматична клінічна інтерпретація результату згідно з вимогами МОЗ України
   String _getInterpretation(int score) {
     switch (widget.scale.id) {
       case 'ims':
@@ -47,21 +49,21 @@ class _TestExecutorScreenState extends State<TestExecutorScreen> {
         return "Висока мобільність (активна локомоція)";
       case 'rass':
         if (score == 0) return "Норма (спокійний, уважний)";
-        if (score > 0) return "Рівень ажитації/ризик зриву апаратури";
-        return "Рівень седації/пригнічення свідомості";
+        if (score > 0) return "Рівень ажитації / Ризик зриву апаратури та катетерів";
+        return "Рівень седації / Пригнічення свідомості";
       case 'vas':
         if (score <= 3) return "Слабкий біль (допускаються всі види вправ)";
         if (score <= 6) return "Помірний біль (потрібна обережність, корекція навантаження)";
-        return "Інтенсивний біль (кінезотерапія обмежена, потрібна аналгезія)";
+        return "Інтенсивний біль (кінезотерапія обмежена, потрібна фармакологічна аналгезія)";
       case 'mrc':
-        if (score < 48) return "Синдром ICUAW (набута слабкість м'язів у ВІТ)";
+        if (score < 48) return "Синдром ICUAW (набута слабкість м'язів у відділенні інтенсивної терапії)";
         return "Нормальна або мінімально знижена м'язова сила";
       case 'bbs':
-        if (score <= 20) return "Високий ризик падіння (переміщення у кріслі колісному)";
-        if (score <= 40) return "Помірний ризик падіння (ходьба з асистенцією/ходунками)";
-        return "Низький ризик падіння (самостійна ходьба)";
+        if (score <= 20) return "Високий ризик падіння (переміщення переважно у кріслі колісному)";
+        if (score <= 40) return "Помірний ризик падіння (ходьба з асистенцією або ходунками)";
+        return "Низький ризик падіння (самостійна безпечна ходьба)";
       default:
-        return "Тест завершено успішно. Результат внесено до бази даних.";
+        return "Тестування завершено. Результат готовий до збереження в карту пацієнта.";
     }
   }
 
@@ -87,7 +89,10 @@ class _TestExecutorScreenState extends State<TestExecutorScreen> {
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.teal),
                 ),
                 const SizedBox(height: 4),
-                Text("Область МКФ: ${widget.scale.icfCategory}", style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+                Text(
+                  "Область МКФ: ${widget.scale.icfCategory}", 
+                  style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.black87),
+                ),
               ],
             ),
           ),
@@ -122,14 +127,13 @@ class _TestExecutorScreenState extends State<TestExecutorScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.scale.testType == 'multi_questions')
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(
-                          question.text,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        question.text,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
                       ),
+                    ),
                     ...question.options.map((option) {
                       return RadioListTile<int>(
                         title: Text(option.text),
@@ -169,11 +173,19 @@ class _TestExecutorScreenState extends State<TestExecutorScreen> {
                           "Всього балів: ${_calculateTotalScore()}",
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           _getInterpretation(_calculateTotalScore()),
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
                         ),
                       ],
+                    ),
+                  ),
+                if (widget.scale.testType == 'inputs')
+                  const Expanded(
+                    child: Text(
+                      "Заповніть клінічні маркери вище",
+                      style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.grey),
                     ),
                   ),
                 ElevatedButton(
@@ -185,7 +197,7 @@ class _TestExecutorScreenState extends State<TestExecutorScreen> {
                       'score': widget.scale.testType != 'inputs' ? _calculateTotalScore() : 0,
                       'interpretation': widget.scale.testType != 'inputs' 
                           ? _getInterpretation(_calculateTotalScore())
-                          : "Внесені дані: ${_answers.values.join(', ')}"
+                          : "Внесені дані: ${_answers.values.where((v) => v.toString().isNotEmpty).join(', ')}"
                     };
                     
                     // Повертаємо результат на попередній екран
@@ -194,6 +206,7 @@ class _TestExecutorScreenState extends State<TestExecutorScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: const Text("Зберегти", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
