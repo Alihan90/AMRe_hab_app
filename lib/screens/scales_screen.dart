@@ -1,108 +1,96 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/patient.dart';
-import 'scale_rass_page.dart';
-import 'scale_mrc_page.dart';
-import 'scale_cpax_page.dart';
-import 'scale_cpot_page.dart';
-import 'scale_ims_page.dart';
-import 'scale_mwt_page.dart';
-import 'scale_goniometry_page.dart';
-import 'scale_stroke_pages.dart'; // Назва файлу точно у множині, як на скриншоті
 
-class ScalesScreen extends StatelessWidget {
-  final Patient? patient;
+class ScalesScreen extends StatefulWidget {
+  final Patient? patient; // Якщо null - відкривається як довідник
   const ScalesScreen({super.key, this.patient});
 
-  final List<Map<String, dynamic>> _scalesData = const [
+  @override
+  State<ScalesScreen> createState() => _ScalesScreenState();
+}
+
+class _ScalesScreenState extends State<ScalesScreen> {
+  // База шкал з детальними описами для лікаря (Чому і Як тестувати)
+  final List<Map<String, dynamic>> _clinicalScales = [
     {
-      "name": "Шкала RASS (Richmond Agitation-Sedation Scale)",
-      "purpose": "Оцінка рівня седації та збудження пацієнта в умовах інтенсивної терапії.",
-      "instruction": "Методика: Спостерігайте за пацієнтом. Спокійний — 0. Агресивний/збуджений — від +1 до +4. Сонливий (реагує на голос) — від -1 до -3. Реагує лише на фізичний подразник — -4 та -5.",
-      "type": "rass"
+      "name": "MRC-SumScore",
+      "why": "Оцінка загальної сили м'язів для виявлення набутої слабкості у відділенні інтенсивної терапії (ICUAW).",
+      "how": "Тестується 6 м'язових груп симетрично з обох сторін (абдукція плеча, згинання передпліччя, розгинання кисті, згинання стегна, розгинання коліна, тильне згинання стопи). Кожна група оцінюється від 0 (немає скорочень) до 5 (нормальна сила). Максимум: 60 балів.",
+      "maxScore": 60
     },
     {
-      "name": "Тест MRC-SumScore (Medical Research Council)",
-      "purpose": "Оцінка загальної м'язової сили для діагностики слабкості, набутої у ВІТ.",
-      "instruction": "Методика: Тестуються 6 м'язових груп симетрично з обох боків. Оцінка від 0 до 5 балів. Максимум — 60 балів.",
-      "type": "mrc"
+      "name": "RASS (Шкала седації-ажитації Ричмонда)",
+      "why": "Моніторинг рівня свідомості пацієнта перед початком та під час ранньої мобілізації для безпеки терапії.",
+      "how": "Оцінка візуального контакту та реакції на вербальні/фізичні подразники. Оцінки варіюються від +4 (войовничий) через 0 (спокійний, уважний) до -5 (не реагує на жодні подразники).",
+      "maxScore": 4
     },
     {
-      "name": "Шкала рівноваги Берга (Berg Balance Scale)",
-      "purpose": "Контроль статичного та динамічного балансу, оцінка ризику падіння.",
-      "instruction": "Методика: Виконання 14 функціональних завдань (вставання, стояння без підтримки, пересаджування тощо). Кожне завдання оцінюється від 0 до 4 балів.",
-      "type": "berg"
-    },
-    {
-      "name": "Індекс мобільності Рівермід (Rivermead Mobility Index)",
-      "purpose": "Оцінка базової рухової активності та рівня самостійності переміщення.",
-      "instruction": "Методика: Оцінка 14 усних питань/тверджень та 1 практичного тесту. За кожне позитивне твердження — 1 бал.",
-      "type": "rivermead"
-    },
-    {
-      "name": "Шкала модифікована Борга (Borg CR10 Scale)",
-      "purpose": "Суб'єктивна оцінка пацієнтом рівня задишки та фізичного навантаження.",
-      "instruction": "Методика: Пацієнт оцінює своє ощущение нестачі повітря або втоми від 0 (взагалі нічого) до 10 (максимально важке навантаження).",
-      "type": "borg"
-    },
-    {
-      "name": "Індекс мобільності CPAx (Chelsea Critical Care Physical Assessment)",
-      "purpose": "Комплексна оцінка фізичної спроможності пацієнтів на ШВЛ.",
-      "instruction": "Методика: Оцінка 10 компонентів (дихання, кашель, рухливість у ліжку тощо) від 0 до 5 балів.",
-      "type": "cpax"
-    },
-    {
-      "name": "Шкала CPOT (Critical-Care Pain Observation Tool)",
-      "purpose": "Об'єктивна оцінка болю у пацієнтів без свідомості або на ШВЛ.",
-      "instruction": "Методика: Оцінка 4 ознак: вираз обличчя, рухова активність, опір ШВЛ та тонус м'язів (0-2 бали на кожну).",
-      "type": "cpot"
-    },
-    {
-      "name": "Шкала мобільності IMS (Intensive Care Unit Mobility Scale)",
-      "purpose": "Фіксація найвищого рівня мобільності пацієнта у ВІТ за добу.",
-      "instruction": "Методика: Градація від 0 (пасивний у ліжку) до 10 (самостійна ходьба без допоміжних засобів).",
-      "type": "ims"
-    },
-    {
-      "name": "Тест MWT (Minute Walk Test / Тести з ходьбою)",
-      "purpose": "Оцінка функціональної толерантності до фізичного навантаження.",
-      "instruction": "Методика: Фиксація відстані за 1, 2 або 6 хвилин. Обов'язково вимірюється сатурація (SpO2), пульс та задишка до і після тесту.",
-      "type": "mwt"
-    },
-    {
-      "name": "Клінічна Гоніометрія (Goniometry)",
-      "purpose": "Вимірювання точних кутів амплітуди рухів у суглобах кінцівок.",
-      "instruction": "Методика: Вісь гоніометра — на центр суглоба, фіксація зміни кутів руху в градусах.",
-      "type": "goniometry"
-    },
-    {
-      "name": "Неврологічні Шкали Інсульту (Stroke Pages / NIHSS)",
-      "purpose": "Оцінка неврологічного дефіциту в гострому періоді інсульту.",
-      "instruction": "Методика: Покрокове тестування свідомості, поглядів, міміки, сили рук та ніг.",
-      "type": "stroke"
+      "name": "Berg Balance Scale (BBS)",
+      "why": "Визначення порушень статичного та динамічного балансу пацієнта перед вертикалізацією.",
+      "how": "Оцінка виконання 14 функціональних завдань (сидіння без підтримки, пересадка, стояння з заплющеними очима тощо). Кожне завдання від 0 до 4 балів. Максимум: 56 балів.",
+      "maxScore": 56
     }
   ];
 
-  void _navigateToScale(BuildContext context, String type) {
-    Widget page;
-    switch (type) {
-      case 'rass': page = ScaleRassPage(patient: patient); break;
-      case 'mrc': page = ScaleMrcPage(patient: patient); break;
-      case 'cpax': page = ScaleCpaxPage(patient: patient); break;
-      case 'cpot': page = ScaleCpotPage(patient: patient); break;
-      case 'ims': page = ScaleImsPage(patient: patient); break;
-      case 'mwt': case 'borg': page = ScaleMwtPage(patient: patient); break;
-      case 'goniometry': page = ScaleGoniometryPage(patient: patient); break;
-      case 'stroke':
-        // Щоб уникнути помилок назви класу (ScaleStrokePage чи ScaleStrokePages), тимчасово відкриваємо калькулятор MWT як безпечний перехід
-        page = ScaleMwtPage(patient: patient);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Модуль оцінки інсульту підключено через загальний менеджер пацієнта.")),
-        );
-        break;
-      case 'berg': case 'rivermead': page = ScaleMwtPage(patient: patient); break;
-      default: return;
+  void _runScaleTest(Map<String, dynamic> scale) {
+    if (widget.patient == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Цей режим є лише довідником. Оберіть пацієнта для проведення тесту.")));
+      return;
     }
-    Navigator.push(context, MaterialPageRoute(builder: (context) => page));
+
+    final scoreCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Проведення тесту: ${scale['name']}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Опис тесту:\n${scale['how']}", style: const TextStyle(fontSize: 11, color: Colors.black87)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: scoreCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: "Введіть отриманий бал (макс: ${scale['maxScore']})"),
+            )
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Скасувати")),
+          ElevatedButton(
+            onPressed: () async {
+              final int? val = int.tryParse(scoreCtrl.text);
+              if (val == null) return;
+
+              final prefs = await SharedPreferences.getInstance();
+              String key = "scale_history_${widget.patient!.id}";
+              List<dynamic> history = [];
+              
+              String? existingData = prefs.getString(key);
+              if (existingData != null) {
+                history = json.decode(existingData);
+              }
+
+              history.add({
+                "date": "${DateTime.now().day}.${DateTime.now().month}",
+                "scale": scale['name'],
+                "score": val
+              });
+
+              await prefs.setString(key, json.encode(history));
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Результат тесту успішно збережено в лог!")));
+              }
+            },
+            child: const Text("Зберегти результат"),
+          )
+        ],
+      ),
+    );
   }
 
   @override
@@ -111,37 +99,44 @@ class ScalesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          "Каталог клінічних шкал",
-          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-        ),
+        title: Text(widget.patient == null ? "Клінічний довідник шкал" : "Тестування: ${widget.patient!.fullName}", style: const TextStyle(color: Colors.white, fontSize: 14)),
       ),
       body: ListView.builder(
-        itemCount: _scalesData.length,
+        padding: const EdgeInsets.all(12),
+        itemCount: _clinicalScales.length,
         itemBuilder: (context, index) {
-          final scale = _scalesData[index];
+          final scale = _clinicalScales[index];
           return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            elevation: 2,
+            margin: const EdgeInsets.symmetric(vertical: 6),
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(14.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(scale["name"], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.between,
+                    children: [
+                      Text(scale['name'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.purple)),
+                      Icon(Icons.help_outline, size: 18, color: Colors.grey.shade600),
+                    ],
+                  ),
                   const SizedBox(height: 6),
-                  Text("🎯 Мета: ${scale["purpose"]}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.blueGrey)),
-                  const SizedBox(height: 4),
-                  Text("📋 Інструкція: ${scale["instruction"]}", style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerRight,
+                  Text("💡 НАВІЩО:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.blueGrey.shade700)),
+                  Text(scale['why'], style: const TextStyle(fontSize: 11, color: Colors.black87)),
+                  const SizedBox(height: 6),
+                  Text("📋 ЯК ПРОВОДИТИ:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.blueGrey.shade700)),
+                  Text(scale['how'], style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                  const Divider(),
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E293B), foregroundColor: Colors.white),
-                      onPressed: () => _navigateToScale(context, scale["type"]),
+                      onPressed: () => _runScaleTest(scale),
                       icon: const Icon(Icons.play_arrow, size: 16),
-                      label: const Text("Перейти до тестування", style: TextStyle(fontSize: 12)),
+                      label: Text(widget.patient == null ? "Переглянути структуру тесту" : "Запустити та зберегти тест"),
                     ),
-                  ),
+                  )
                 ],
               ),
             ),
