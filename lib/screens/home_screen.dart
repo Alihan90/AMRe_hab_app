@@ -20,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
       "gender": "Чоловік",
       "chamber": "Палата №302",
       "dateIn": "2026-05-20",
-      "diagnosis": "Гострий порушення мозкового кровообігу (Ішемічний інсульт в басейні правої СМА), лівобічний геміпарез, виражені порушення ходьби та рівноваги.",
+      "diagnosis": "Гостре порушення мозкового кровообігу (Ішемічний інсульт в басейні правої СМА), лівобічний геміпарез, виражені порушення ходьби та рівноваги.",
       "icfStatus": "b730.3 (Тяжке порушення функцій сили м'язів), d450.2 (Помірне порушення функції ходьби)",
       "history": [
         {"scaleId": "ims", "date": "2026-06-01", "score": 3, "interpretation": "Помірна мобільність (межі палати з підтримкою)"},
@@ -43,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   ];
 
-  // Логіка запуску тесту для пацієнта
+  // Логіка запуска тесту для пацієнта
   void _startTestForPatient(Map<String, dynamic> patient) async {
     final scale = await Navigator.push<dynamic>(
       context,
@@ -84,10 +84,10 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: DefaultTabController(
-            length: 3, // Три повноцінні вкладки архітектури додатку
+            length: 3,
             child: Column(
               children: [
-                // Кастомний красивий заголовок картки
+                // Кастомний заголовок картки
                 Container(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                   decoration: BoxDecoration(
@@ -127,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                       ),
                       const SizedBox(height: 10),
-                      // Перемикач вкладок (Дизайн та Навігація)
+                      // Перемикач вкладок
                       const TabBar(
                         labelColor: Colors.teal,
                         unselectedLabelColor: Colors.grey,
@@ -159,7 +159,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 6),
                           Card(
                             color: Colors.orange.shade50,
-                            borderOnForeground: true,
                             shape: RoundedRectangleBorder(side: BorderSide(color: Colors.orange.shade200), borderRadius: BorderRadius.circular(8)),
                             child: Padding(
                               padding: const EdgeInsets.all(12.0),
@@ -192,7 +191,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (patient['history'].isEmpty)
                             const Padding(
                               padding: EdgeInsets.only(top: 20),
-                              child: Text("Жодної шкали ще не проведено.", style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey), textAlign: Center),
+                              child: Text(
+                                "Жодної шкали ще не проведено.", 
+                                style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey), 
+                                textAlign: TextAlign.center, // ВИПРАВЛЕНО ПОМИЛКУ ТУТ
+                              ),
                             )
                           else
                             ...patient['history'].map<Widget>((session) {
@@ -226,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
 
-                      // ВКЛАДКА 3: Призначення фізичних вправ (Протоколи МОЗ)
+                      // ВКЛАДКА 3: Призначення фізичних вправ
                       ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
@@ -248,7 +251,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   return Container(
                                     decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade100))),
                                     child: ListTile(
-                                      title: Text(item['name'], style: const TextStyle(vertical: 2, fontWeight: FontWeight.w600, fontSize: 14, color: Colors.teal)),
+                                      title: Text(
+                                        item['name'], 
+                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.teal), // ВИПРАВЛЕНО ПОМИЛКУ ТУТ
+                                      ),
                                       subtitle: Padding(
                                         padding: const EdgeInsets.only(top: 4.0, bottom: 6.0),
                                         child: Text(item['desc'], style: const TextStyle(fontSize: 13, height: 1.3, color: Colors.black54)),
@@ -313,7 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Список пацієнтів у відділенні
+          // Список пацієнтів
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 12),
