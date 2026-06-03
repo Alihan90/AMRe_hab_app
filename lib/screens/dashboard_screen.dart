@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
 import '../models/patient.dart';
-import 'scales_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Patient patient;
@@ -14,267 +17,307 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  List<dynamic> _scaleLogs = [];
+  late Patient _p;
+  
+  // Повна клінічна база 16 шкал з питаннями та критеріями згідно з міжнародними стандартами
+  final List<Map<String, dynamic>> _all16Scales = [
+    {"name": "1. IMS (ICU Mobility Scale)", "desc": "Індекс мобільності у ВІТ від 0 (лежачий) до 10 (самостійна ходьба без засобів)."},
+    {"name": "2. Ортостатичний тест", "desc": "Оцінка реакції ССС. Вимірювання АТ та ЧСС лежачи/стоячи. Різниця ЧСС >20 уд/хв - ортостатична інтолерантність."},
+    {"name": "3. Шкала задишки Борга (модифікована 0–10)", "desc": "Суб'єктивне відчуття браку повітря. 0 - немає, 5 - тяжка, 10 - максимальна."},
+    {"name": "4. 6-хвилинний тест ходьби (6MWT)", "desc": "Вимірювання дистанції в метрах, яку пацієнт долає за 6 хвилин. Оцінка кардіореспіраторного резерву."},
+    {"name": "5. Шкала седації та збудження Річмонда (RASS)", "desc": "Діапазон від +4 (агресивний) до -5 (глибока седація). Ціль ранньої мобілізації: 0 або -1."},
+    {"name": "6. Рівні Rancho Los Amigos", "desc": "Шкала оцінки когнітивного функціонування після ЧМТ (Рівні від I до VIII/X)."},
+    {"name": "7. Монреальська шкала когніцій (MoCA)", "desc": "Скринінг когнітивних порушень. Максимум 30 балів. Норма >= 26 балів."},
+    {"name": "8. Шкала болю CPOT", "desc": "Оцінка болю у важких пацієнтів у ВІТ (на ШВЛ) за мімікою, руховою активністю та опором респіратору (0-8 балів)."},
+    {"name": "9. Візуально-аналогова шкала болю (VAS / ВАШ)", "desc": "Суб'єктивна оцінка інтенсивності болю пацієнтом від 0 (немає болю) до 10 (нестерпний)."},
+    {"name": "10. Сила м'язів MRC-SumScore", "desc": "Сумарна оцінка сили 6 м'язових груп симетрично. Максимум 60 балів. Критичний рівень слабкості ВІТ < 48 балів."},
+    {"name": "11. Модифікована шкала спастичності Ашворт (MAS)", "desc": "Оцінка опору м'язів при пасивних рухах: 0 (норма) до 4 (заціпеніння/фіксація)."},
+    {"name": "12. Шкала рівноваги Берга (BBS)", "desc": "14 функціональних тестів на баланс. Макс 56 балів. Балів <36 - високий ризик падінь."},
+    {"name": "13. Індекс мобільності Рівермід (RMI)", "desc": "15 питань про повсякденну рухливість пацієнта (Так/Ні). Макс 15 балів."},
+    {"name": "14. Шкала інтенсивної терапії Chelsea (CPAX)", "desc": "Оцінка 10 функціональних доменів (кашель, дихання, переміщення тощо) від 0 до 50 балів."},
+    {"name": "15. Тест фізичної форми у ВІТ (PFIT-s)", "desc": "Комплекс: допомога при вставанні, марш на місці, сила рук та ніг."},
+    {"name": "16. Індекс повсякденної життєдіяльності Бартел", "desc": "Оцінка незалежності пацієнта в самообслуговуванні (0-100 балів). <20 - повна залежність."}
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadScaleLogs();
+    _p = widget.patient;
   }
 
-  Future<void> _loadScaleLogs() async {
+  // Збереження оновленого стану пацієнта / ІРП
+  Future<void> _savePatientData() async {
     final prefs = await SharedPreferences.getInstance();
-    String key = "scale_history_${widget.patient.id}";
-    String? existingData = prefs.getString(key);
-    if (existingData != null) {
-      setState(() {
-        _scaleLogs = json.decode(existingData);
-      });
-    } else {
-      // Базовий початковий лог, якщо тестів ще не було
-      setState(() {
-        _scaleLogs = [
-          {"date": "01.06", "scale": "MRC-SumScore", "score": 24},
-          {"date": "02.06", "scale": "RASS", "score": -3}
-        ];
-      });
+    final String? data = prefs.getString('patients_database');
+    if (data != null) {
+      List decoded = json.decode(data);
+      List<Patient> list = decoded.map((p) => Patient.fromMap(p)).toList();
+      int index = list.indexWhere((element) => element.id == _p.id);
+      if (index != -1) {
+        list[index] = _p;
+        await prefs.setString('patients_database', json.encode(list.map((e) => e.toMap()).toList()));
+      }
     }
   }
 
-  void _shareFullDischargeSummary() {
-    final Map<String, dynamic> pMap = widget.patient.toMap();
-    final String chamber = pMap['chamber'] ?? 'ВІТ';
-    final String diagnosis = pMap['diagnosis'] ?? 'Не вказано';
-    final String goal = widget.patient.currentSmartGoal;
-
-    String exercisePlan = "";
-    if (diagnosis.contains("I63") || diagnosis.contains("I61")) {
-      exercisePlan = "1. Раннє висаджування з підтримкою.\n2. Антиспастичні укладки.\n3. Сенсорна дзеркальна активація.";
-    } else if (diagnosis.contains("S06")) {
-      exercisePlan = "1. Ортостатичний тренінг (ліжко-вертикалізатор).\n2. Контроль м'язового тонусу та фіксації погляду.\n3. Вправи для шийного відділу.";
-    } else {
-      exercisePlan = "1. Активно-пасивна гімнастика в межах ліжка.\n2. Дихальні техніки з опором (PEP-терапія).\n3. Електроміостимуляція.";
-    }
-
-    String scaleHistoryText = "";
-    for (var log in _scaleLogs) {
-      scaleHistoryText += "• [${log['date']}] ${log['scale']}: ${log['score']} балів\n";
-    }
-
-    final String document = """
-🏥 ВІДДІЛЕННЯ РАННЬОЇ РЕАБІЛІТАЦІЇ ВІТ
-=============================================
-ВИПИСНА КАРТА ПАЦІЄНТА / РЕАБІЛІТАЦІЙНИЙ ЗВІТ
-=============================================
-Пацієнт: ${widget.patient.fullName}
-Вік: ${widget.patient.age} р.      Локація: $chamber
-Діагноз за МКХ-10: $diagnosis
-
----------------------------------------------
-🎯 ЗАТВЕРДЖЕНА КЛІНІЧНА SMART-ЦІЛЬ:
-$goal
-
----------------------------------------------
-📈 ДИНАМІКА ОЦІНОК ШКАЛ (ЗБЕРЕЖЕНІ ЛОГИ):
-$scaleHistoryText
----------------------------------------------
-🏋️‍♂️ АВТОМАТИЧНО ПІДІБРАНИЙ ПЛАН ВПРАВ:
-$exercisePlan
-
-=============================================
-Висновок сформовано автоматично у додатку.
-Дата: ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}
-Фізичний терапевт: ____________________
-""";
-
-    Share.share(document, subject: 'Виписна карта ВІТ - ${widget.patient.fullName}');
-  }
-
-  void _showAutoExerciseProtocol(BuildContext context, String diagnosis) {
-    String title = "Протокол фізичної реабілітації";
-    List<String> steps = [];
-
-    if (diagnosis.contains("I63") || diagnosis.contains("I61")) {
-      title = "🧠 Авто-Протокол: Гострий Інсульт";
-      steps = [
-        "Циклічні пасивні та активні рухи в суглобах уражених кінцівок для профілактики контрактур.",
-        "Терапія положенням: укладка паралізованої руки та ноги проти типової спастичної позиції.",
-        "Вправи на стабілізацію кору та висаджування на край ліжка з підтримкою терапевта."
-      ];
-    } else if (diagnosis.contains("S06")) {
-      title = "💥 Авто-Протокол: Тяжка ЧМТ / Забій мозку";
-      steps = [
-        "Моніторинг церебрального перфузійного тиску та уникнення різких нахилів голови вниз.",
-        "Пасивна вертикалізація на поворотному столі (кут від 30° до 60°) під контролем АТ.",
-        "Стимуляція зорового та слухового провідних шляхів під час виконання рухових вправ."
-      ];
-    } else {
-      title = "🏥 Авто-Протокол: Синдром ICUAW (Слабість ВІТ)";
-      steps = [
-        "Вправи з прогресуючим опором за допомогою еластичних стрічок для великих м'язових груп.",
-        "Тренування дихальної мускулатури (респіраторний тренінг з опором видиху).",
-        "Рання циклічна мобілізація: використання приліжкового велоергометра."
-      ];
-    }
+  // РЕДАКТОР ІРП (Індивідуального Реабілітаційного Плану) згідно з вимогами МОЗ України
+  void _editIrpDialog() {
+    final icfCtrl = TextEditingController(text: _p.icfCodes);
+    final goalCtrl = TextEditingController(text: _p.currentSmartGoal);
+    final interventionsCtrl = TextEditingController(text: _p.irpInterventions);
+    final termCtrl = TextEditingController(text: _p.irpTerm);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: steps.map((s) => Padding(
-            padding: const EdgeInsets.only(bottom: 6.0),
-            child: Text("✔ $s", style: const TextStyle(fontSize: 12, color: Colors.black87)),
-          )).toList(),
+        title: const Text("Редагування ІРП (Форма МОЗ України)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: icfCtrl, decoration: const InputDecoration(labelText: "Коди обмеження життєдіяльності (МКФ)")),
+              TextField(controller: goalCtrl, maxLines: 2, decoration: const InputDecoration(labelText: "SMART-ціль реабілітації")),
+              TextField(controller: interventionsCtrl, maxLines: 4, decoration: const InputDecoration(labelText: "Втручання фізичного терапевта")),
+              TextField(controller: termCtrl, decoration: const InputDecoration(labelText: "Терміни контролю")),
+            ],
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Зрозуміло")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Скасувати")),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _p.icfCodes = icfCtrl.text;
+                _p.currentSmartGoal = goalCtrl.text;
+                _p.irpInterventions = interventionsCtrl.text;
+                _p.irpTerm = termCtrl.text;
+              });
+              _savePatientData();
+              Navigator.pop(context);
+            },
+            child: const Text("Зберегти зміни"),
+          )
         ],
       ),
     );
   }
 
-  void _showDynamicsChart(BuildContext context) {
-    showModalBottomSheet(
+  // Інтерактивне вікно проведення тестування з будь-якої з 16 шкал
+  void _performScaleTest(Map<String, dynamic> scale) {
+    final scoreCtrl = TextEditingController();
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      builder: (context) => AlertDialog(
+        title: Text("Клінічне тестування: ${scale['name']}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("📈 Хронологічний лог та Динаміка відновлення", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
-            const SizedBox(height: 4),
-            const Text("Результати всіх проведених тестів пацієнта:", style: TextStyle(fontSize: 11, color: Colors.black54)),
-            const Divider(),
-            Expanded(
-              child: _scaleLogs.isEmpty 
-                ? const Center(child: Text("Історія тестувань порожня"))
-                : ListView.builder(
-                    itemCount: _scaleLogs.length,
-                    itemBuilder: (context, index) {
-                      final log = _scaleLogs[index];
-                      return ListTile(
-                        dense: true,
-                        leading: const Icon(Icons.trending_up, color: Colors.green),
-                        title: Text("${log['scale']}: ${log['score']} балів", style: const TextStyle(fontWeight: FontWeight.bold)),
-                        trailing: Text("Дата: ${log['date']}", style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                      );
-                    },
-                  ),
+            Text("Методологія та інструкція:\n${scale['desc']}", style: const TextStyle(fontSize: 11, color: Colors.black54)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: scoreCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: "Введіть підсумковий бал за шкалою"),
             )
           ],
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Скасувати")),
+          ElevatedButton(
+            onPressed: () {
+              if (scoreCtrl.text.isEmpty) return;
+              setState(() {
+                _p.testHistory.add({
+                  "date": "${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}",
+                  "scale": scale['name'],
+                  "score": scoreCtrl.text
+                });
+              });
+              _savePatientData();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Результат шкали успішно внесено в ІРП пацієнта!")));
+            },
+            child: const Text("Зафіксувати бал"),
+          )
+        ],
       ),
     );
+  }
+
+  // ОФЛАЙН-ГЕНЕРАТОР PDF-ДОКУМЕНТІВ (Виписна карта пацієнта та ІРП відповідно до Наказів МОЗ)
+  Future<void> _downloadAndExportPdf() async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(20),
+            child: pw.Column(
+              cross pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text("ЗАТВЕРДЖЕНО НАКАЗОМ МОЗ УКРАЇНИ", style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                pw.Text("ІНДИВІДУАЛЬНИЙ РЕАБІЛІТАЦІЙНИЙ ПЛАН (ІРП)", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                pw.Divider(),
+                pw.SizedBox(height: 10),
+                pw.Text("Пацієнт (ПІБ): ${_p.fullName}", style: pw.TextStyle(fontSize: 12)),
+                pw.Text("Вік: ${_p.age} р. | Локація: ${_p.chamber}", style: pw.TextStyle(fontSize: 12)),
+                pw.Text("Діагноз (МКХ-10): ${_p.diagnosis}", style: pw.TextStyle(fontSize: 12)),
+                pw.SizedBox(height: 10),
+                pw.Text("1. КОДИФІКАЦІЯ ОБМЕЖЕНЬ ЗА МКФ:", style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.Text(_p.icfCodes, style: pw.TextStyle(fontSize: 11)),
+                pw.SizedBox(height: 10),
+                pw.Text("2. КЛІНІЧНА SMART-ЦІЛЬ РЕАБІЛІТАЦІЇ:", style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.Text(_p.currentSmartGoal, style: pw.TextStyle(fontSize: 11)),
+                pw.SizedBox(height: 10),
+                pw.Text("3. ПРИЗНАЧЕНІ РЕАБІЛІТАЦІЙНІ ВТРУЧАННЯ (ВПРАВИ):", style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.Text(_p.irpInterventions, style: pw.TextStyle(fontSize: 11)),
+                pw.SizedBox(height: 10),
+                pw.Text("4. МОНІТОРІНГ ДИНАМІКИ (РЕЗУЛЬТАТИ 16 ШКАЛ):", style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.Text(_p.testHistory.map((e) => "[${e['date']}] ${e['scale']}: ${e['score']} б.").join("\n"), style: pw.TextStyle(fontSize: 11)),
+                pw.Spacer(),
+                pw.Divider(),
+                pw.Text("Документ сформовано автономно в додатку 'ВІТ Реабілітація'. Папір відповідає стандартам НСЗУ.", style: pw.TextStyle(fontSize: 8)),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    // Збереження файлу в локальне офлайн-сховище пристрою
+    final output = await getTemporaryDirectory();
+    final file = File("${output.path}/IRP_${_p.fullName.replaceAll(' ', '_')}.pdf");
+    await file.writeAsBytes(await pdf.save());
+
+    // Виклик вікна скачування / надсилання файлу на телефоні
+    await Share.shareXFiles([XFile(file.path)], text: 'ІРП та Карта пацієнта: ${_p.fullName}');
   }
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> pMap = widget.patient.toMap();
-    final String chamber = pMap['chamber'] ?? 'ВІТ';
-    final String diagnosis = pMap['diagnosis'] ?? 'Не вказано';
-    final String goal = widget.patient.currentSmartGoal;
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text("Карта Пацієнта ВІТ", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        title: const Text("Реабілітаційна карта & ІРП пацієнта", style: TextStyle(color: Colors.white, fontSize: 13)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share, color: Colors.white),
-            onPressed: _shareFullDischargeSummary,
+            icon: const Icon(Icons.picture_as_pdf, color: Colors.redAccent),
+            onPressed: _downloadAndExportPdf,
+            tooltip: "Скачати карту пацієнта в PDF",
           )
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ПАСПОРТНА ЧАСТИНА ПАЦІЄНТА
             Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.grey.shade50,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(12.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.patient.fullName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                    const SizedBox(height: 6),
-                    Text("Вік: ${widget.patient.age} років   |   Локація: $chamber", style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
-                    const Divider(height: 20),
-                    Text("📋 Діагноз (МКХ-10):\n$diagnosis", style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                    const Divider(height: 20),
-                    const Text("🎯 Поточна SMART-ціль пацієнта:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 11)),
+                    Text(_p.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     const SizedBox(height: 4),
-                    Text(goal, style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.purple)),
+                    Text("Вік: ${_p.age} років | Локація: ${_p.chamber}", style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                    Text("Основний діагноз (МКХ-10): ${_p.diagnosis}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             
+            // БЛОК ІРП (ІНДИВІДУАЛЬНИЙ РЕАБІЛІТАЦІЙНИЙ ПЛАН - СТАНДАРТ МОЗ)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.between,
+              children: [
+                const Text("📋 ІНДИВІДУАЛЬНИЙ РЕАБІЛІТАЦІЙНИЙ ПЛАН", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.teal)),
+                IconButton(icon: const Icon(Icons.edit, color: Colors.teal, size: 20), onPressed: _editIrpDialog),
+              ],
+            ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.teal.withOpacity(0.05), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.teal.withOpacity(0.3))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("🎯 SMART-Ціль: ${_p.currentSmartGoal}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Text("🔗 Набір кодів МКФ: ${_p.icfCodes}", style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+                  const SizedBox(height: 6),
+                  const Text("🏋️ Втручання та дозування вправ:", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  Text(_p.irpInterventions, style: const TextStyle(fontSize: 11, color: Colors.black87)),
+                  const SizedBox(height: 4),
+                  Text("⏳ Терміни реалізації плана: ${_p.irpTerm}", style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // КНОПКА СКАЧАТИ ПДФ НА ТЕЛЕФОН
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E293B), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
-                onPressed: _shareFullDischargeSummary,
-                icon: const Icon(Icons.description),
-                label: const Text("Сформувати виписну карту пацієнта", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E293B), foregroundColor: Colors.white),
+                onPressed: _downloadAndExportPdf,
+                icon: const Icon(Icons.download, size: 16),
+                label: const Text("Скачати повний ІРП та Карту у PDF", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ),
-            const SizedBox(height: 20),
-            const Text("Функціональні дії та автоматизація", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-            const SizedBox(height: 12),
-            
-            GridView.count(
+            const SizedBox(height: 16),
+
+            // ДИНАМІЧНИЙ ЛОГ ТЕСТУВАНЬ З ШКАЛ
+            const Text("📈 Лог та історія оцінювання шкал пацієнта:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            Container(
+              height: 100,
+              child: _p.testHistory.isEmpty
+                ? const Center(child: Text("Тестувань за 16 шкалами ще не проводилось.", style: TextStyle(fontSize: 11, color: Colors.grey)))
+                : ListView.builder(
+                    itemCount: _p.testHistory.length,
+                    itemBuilder: (context, idx) {
+                      final log = _p.testHistory[idx];
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
+                        title: Text("${log['scale']}: ${log['score']} балів", style: const TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold as FontWeight?)),
+                        trailing: Text(log['date'], style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                      );
+                    },
+                  ),
+            ),
+            const Divider(),
+
+            // ІНТЕРАКТИВНИЙ СПИСОК 16 КЛІНІЧНИХ ШКАЛ ДЛЯ ЗАПУСКУ
+            const Text("📋 ЗАПУСТИТИ ОБСТЕЖЕННЯ (16 МІЖНАРОДНИХ ШКАЛ):", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue)),
+            const SizedBox(height: 8),
+            ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              children: [
-                _buildMenuCard(context, "Провести тест\n(Описи шкал)", Icons.assessment, Colors.green, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => ScalesScreen(patient: widget.patient))).then((_) => _loadScaleLogs());
-                }),
-                _buildMenuCard(context, "Авто-протокол\nвправ", Icons.psychology, Colors.orange, () {
-                  _showAutoExerciseProtocol(context, diagnosis);
-                }),
-                _buildMenuCard(context, "Історія та лог\nбалів шкал", Icons.show_chart, Colors.blue, () {
-                  _showDynamicsChart(context);
-                }),
-                _buildMenuCard(context, "Експорт / Надіслати\nколегам", Icons.share, Colors.purple, () {
-                  _shareFullDischargeSummary();
-                }),
-              ],
-            ),
+              itemCount: _all16Scales.length,
+              itemBuilder: (context, index) {
+                final scale = _all16Scales[index];
+                return Card(
+                  elevation: 1,
+                  margin: const EdgeInsets.symmetric(vertical: 3),
+                  child: ListTile(
+                    dense: true,
+                    title: Text(scale['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.purple)),
+                    subtitle: Text(scale['desc'], style: const TextStyle(fontSize: 11)),
+                    trailing: const Icon(Icons.play_circle_fill, color: Colors.blue, size: 22),
+                    onTap: () => _performScaleTest(scale),
+                  ),
+                );
+              },
+            )
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuCard(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 30, color: color),
-              const SizedBox(height: 8),
-              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-            ],
-          ),
         ),
       ),
     );
