@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/patient.dart';
-import 'dashboard_screen.dart'; // Виправлено імпорт
+import 'dashboard_screen.dart';
 import 'scales_screen.dart';
 
 class MainListScreen extends StatefulWidget {
@@ -40,15 +40,16 @@ class _MainListScreenState extends State<MainListScreen> {
 
   void _createMockData() async {
     final prefs = await SharedPreferences.getInstance();
-    List<Patient> mock = [
-      Patient(id: "1", fullName: "Іванов Петро Сидорович", age: 54, chamber: "ВІТ-2, ліжко 3", diagnosis: "ГПМК, правобічний геміпарез", currentSmartGoal: "Стабілізація сидячи 10 хв"),
-      Patient(id: "2", fullName: "Сидоров Олег Миколайович", age: 43, chamber: "ВІТ-1, ліжко 1", diagnosis: "ЧМТ, забій головного мозку", currentSmartGoal: "Збільшення мобільності в ліжку"),
+    // Використовуємо універсальний імпорт з мапи, щоб обійти відсутні поля в конструкторі
+    List<Map<String, dynamic>> mockData = [
+      {"id": "1", "fullName": "Іванов Петро Сидорович", "age": 54, "chamber": "ВІТ-2", "diagnosis": "ГПМК", "currentSmartGoal": "Стабілізація сидячи"},
+      {"id": "2", "fullName": "Сидоров Олег Миколайович", "age": 43, "chamber": "ВІТ-1", "diagnosis": "ЧМТ", "currentSmartGoal": "Мобільність в ліжку"}
     ];
     setState(() {
-      _patients = mock;
-      _filteredPatients = mock;
+      _patients = mockData.map((p) => Patient.fromMap(p)).toList();
+      _filteredPatients = _patients;
     });
-    await prefs.setString('patients_list', json.encode(mock.map((p) => p.toMap()).toList()));
+    await prefs.setString('patients_list', json.encode(mockData));
   }
 
   void _filterPatients() {
@@ -63,7 +64,7 @@ class _MainListScreenState extends State<MainListScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
-        title: const Text("ВІТ Реабілітація", style: TextStyle(color: Colors.white, fontWeight: Colors.bold)),
+        title: const Text("ВІТ Реабілітація", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: Column(
         children: [
@@ -116,9 +117,9 @@ class _MainListScreenState extends State<MainListScreen> {
                         child: ListTile(
                           leading: const CircleAvatar(backgroundColor: Color(0xFF334155), child: Icon(Icons.person, color: Colors.white)),
                           title: Text(patient.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          subtitle: Text("${patient.chamber} • ${patient.diagnosis}", maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                          subtitle: Text(patient.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => DashboardScreen(patient: patient))).then((_) => _loadPatients()), // Змінено на DashboardScreen
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => DashboardScreen(patient: patient))).then((_) => _loadPatients()),
                         ),
                       );
                     },
