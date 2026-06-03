@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/patient.dart';
-import 'patient_card_screen.dart';
+import 'dashboard_screen.dart'; // Виправлено імпорт
 import 'scales_screen.dart';
 
 class MainListScreen extends StatefulWidget {
@@ -67,7 +67,6 @@ class _MainListScreenState extends State<MainListScreen> {
       ),
       body: Column(
         children: [
-          // Блок швидкого переходу до загальних шкал
           Container(
             width: double.infinity,
             margin: const EdgeInsets.all(12),
@@ -79,20 +78,19 @@ class _MainListScreenState extends State<MainListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Клінічні оцінки та шкали", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: Colors.bold)),
+                const Text("Клінічні оцінки та шкали", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 const Text("Швидкий доступ до інструкцій та калькуляторів без прив'язки до картки пацієнта.", style: TextStyle(color: Colors.white70, fontSize: 12)),
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.purple.shade700, foregroundColor: Colors.white),
                   onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ScalesScreen(patient: null))),
-                  icon: const Icon(Icons.Assessment),
+                  icon: const Icon(Icons.assessment),
                   label: const Text("Відкрити каталог шкал"),
                 )
               ],
             ),
           ),
-          // Пошук пацієнтів
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: TextField(
@@ -106,7 +104,6 @@ class _MainListScreenState extends State<MainListScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          // Список пацієнтів
           Expanded(
             child: _filteredPatients.isEmpty
                 ? const Center(child: Text("Пацієнтів не знайдено"))
@@ -121,7 +118,7 @@ class _MainListScreenState extends State<MainListScreen> {
                           title: Text(patient.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                           subtitle: Text("${patient.chamber} • ${patient.diagnosis}", maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PatientCardScreen(patient: patient))).then((_) => _loadPatients()),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => DashboardScreen(patient: patient))).then((_) => _loadPatients()), // Змінено на DashboardScreen
                         ),
                       );
                     },
