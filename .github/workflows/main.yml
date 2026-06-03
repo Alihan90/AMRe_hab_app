@@ -1,70 +1,40 @@
-name: Build Flutter Android APK
+name: Flutter CI Main
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch: # Дозволяє запускати збірку вручну мишкою з вкладки Actions
 
 jobs:
-  build:
+  deploy_apk:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Set up Flutter Environment
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.2'
           channel: 'stable'
 
-      - name: Get Flutter dependencies
+      - name: Fetch Flutter Packages
         run: flutter pub get
 
-      - name: Auto-repair Android target SDK and Duplicate Classes
+      - name: Inject Android SDK 34 Overrides
         run: |
-          # Створюємо платформу з правильною назвою проекту маленькими літерами, якщо папки немає
-          if [ ! -d "android" ]; then
-            echo "Папку android не знайдено. Створюємо шаблон..."
-            flutter create . --platforms=android --project-name=amre_hab_app
-          fi
-          
-          # Примусово міняємо версію SDK на 34 у всіх конфігураціях Gradle
-          find android/ -name "build.gradle" -exec sed -i 's/compileSdkVersion 33/compileSdkVersion 34/g' {} +
-          find android/ -name "build.gradle" -exec sed -i 's/targetSdkVersion 33/targetSdkVersion 34/g' {} +
-          find android/ -name "build.gradle" -exec sed -i 's/compileSdk 33/compileSdk 34/g' {} +
-          find android/ -name "build.gradle" -exec sed -i 's/targetSdk 33/targetSdk 34/g' {} +
-
-          # ВИПРАВЛЕННЯ ДУБЛІКАТІВ КЛАСІВ KOTLIN:
-          # Прописуємо примусове вирівнювання залежностей у конфігурацію gradle додатка
-          GRADLE_FILE="android/app/build.gradle"
-          if [ -f "$GRADLE_FILE" ]; then
-            echo "Впроваджуємо виправлення дублікатів Kotlin у $GRADLE_FILE..."
-            echo "
-            configurations.all {
-                resolutionStrategy {
-                    eachDependency { details ->
-                        if (details.requested.group == 'org.jetbrains.kotlin') {
-                            details.useVersion '1.8.10'
-                        }
-                    }
-                }
-            }" >> $GRADLE_FILE
+          if [ -f android/app/build.gradle ]; then
+            sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
+            sed -i 's/compileSdk .*/compileSdk 34/g' android/app/build.gradle || true
+            sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
+            sed -i 's/targetSdk .*/targetSdk 34/g' android/app/build.gradle || true
           fi
 
-      - name: Build APK Release
+      - name: Compile Application APK
         run: flutter build apk --release --no-tree-shake-icons
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: vit-rehab-app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
