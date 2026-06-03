@@ -11,11 +11,7 @@ class DashboardScreen extends StatelessWidget {
     final String report = """
 📋 ЗВІТ РАННЬОЇ РЕАБІЛІТАЦІЇ ВІТ
 Пацієнт: ${patient.fullName}
-Вік: ${patient.age} р. Палата/Ліжко: ${patient.chamber}
-Діагноз: ${patient.diagnosis}
-----------------------------------
-🎯 Поточна SMART-ціль або статус:
-${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.currentSmartGoal}
+Вік: ${patient.age} р.
 ----------------------------------
 Згенеровано в додатку ВІТ-Реабілітація.
 """;
@@ -28,7 +24,7 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text("Карта Пацієнта", style: TextStyle(color: Colors.white, fontWeight: Colors.bold, fontSize: 16)),
+        title: const Text("Карта Пацієнта", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
@@ -60,15 +56,9 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
                       ],
                     ),
                     const Divider(height: 24),
-                    Text("Вік: ${patient.age} р.  |  Розміщення: ${patient.chamber}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    Text("Вік: ${patient.age} р.", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 6),
-                    Text("Діагноз: ${patient.diagnosis}", style: const TextStyle(fontSize: 13, color: Colors.black87)),
-                    if (patient.currentSmartGoal.isNotEmpty) ...[
-                      const Divider(height: 20),
-                      const Text("Поточний статус / Логи шкал:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 12)),
-                      const SizedBox(height: 4),
-                      Text(patient.currentSmartGoal, style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
-                    ]
+                    const Text("Статус пацієнта активний у відділенні ранньої реабілітації.", style: const TextStyle(fontSize: 13, color: Colors.black87)),
                   ],
                 ),
               ),
