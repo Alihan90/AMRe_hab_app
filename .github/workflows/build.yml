@@ -34,13 +34,16 @@ jobs:
       - name: Force Android SDK 34 Core Config
         run: |
           if [ -f android/app/build.gradle ]; then
-            # Замінюємо будь-які згадки версій компіляції на 34
+            # Виставляємо версії компіляції та таргету на 34
             sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
             sed -i 's/compileSdk .*/compileSdk 34/g' android/app/build.gradle || true
             sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
             sed -i 's/targetSdk .*/targetSdk 34/g' android/app/build.gradle || true
             
-            # Додатково коригуємо файл налаштувань самого Gradle, якщо він створений через змінні
+            # Підіймаємо мінімальну підтримувану версію до 23, щоб не конфліктували плагіни
+            sed -i 's/minSdkVersion .*/minSdkVersion 23/g' android/app/build.gradle || true
+            sed -i 's/minSdk .*/minSdk 23/g' android/app/build.gradle || true
+            
             sed -i 's/flutter.compileSdkVersion.*/34/g' android/local.properties || true
             sed -i 's/flutter.targetSdkVersion.*/34/g' android/local.properties || true
           fi
