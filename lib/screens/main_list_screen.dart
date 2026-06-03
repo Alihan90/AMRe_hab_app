@@ -40,10 +40,9 @@ class _MainListScreenState extends State<MainListScreen> {
 
   void _createMockData() async {
     final prefs = await SharedPreferences.getInstance();
-    // Використовуємо універсальний імпорт з мапи, щоб обійти відсутні поля в конструкторі
     List<Map<String, dynamic>> mockData = [
-      {"id": "1", "fullName": "Іванов Петро Сидорович", "age": 54, "chamber": "ВІТ-2", "diagnosis": "ГПМК", "currentSmartGoal": "Стабілізація сидячи"},
-      {"id": "2", "fullName": "Сидоров Олег Миколайович", "age": 43, "chamber": "ВІТ-1", "diagnosis": "ЧМТ", "currentSmartGoal": "Мобільність в ліжку"}
+      {"id": "1", "fullName": "Іванов Петро Сидорович", "age": 54, "chamber": "ВІТ-2, ліжко 3", "diagnosis": "I63.3 Інфаркт головного мозку (ГПМК)", "currentSmartGoal": "Стабілізація сидячи без підтримки 10 хвилин"},
+      {"id": "2", "fullName": "Сидоров Олег Миколайович", "age": 43, "chamber": "ВІТ-1, ліжко 1", "diagnosis": "S06.2 Дифузне травматичне ушкодження головного мозку (ЧМТ)", "currentSmartGoal": "Збільшення мобільності в ліжку, повороти"}
     ];
     setState(() {
       _patients = mockData.map((p) => Patient.fromMap(p)).toList();
@@ -59,12 +58,82 @@ class _MainListScreenState extends State<MainListScreen> {
     });
   }
 
+  void _showAddPatientDialog() {
+    final nameCtrl = TextEditingController();
+    final ageCtrl = TextEditingController();
+    final chamberCtrl = TextEditingController();
+    final goalCtrl = TextEditingController();
+    String selectedMkh = "I63.3 Інфаркт головного мозку";
+
+    final List<String> mkhOptions = [
+      "I63.3 Інфаркт головного мозку",
+      "I61 Внутрішньомозковий крововилив",
+      "S06.2 Дифузна ЧМТ",
+      "G62.8 Інші визначені полінейропатії (Слабість ВІТ)",
+      "G72.8 Інші визначені міопатії"
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Реєстрація пацієнта ВІТ", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "ПІБ пацієнта")),
+              TextField(controller: ageCtrl, decoration: const InputDecoration(labelText: "Вік (років)"), keyboardType: TextInputType.number),
+              TextField(controller: chamberCtrl, decoration: const InputDecoration(labelText: "Палата / Ліжко")),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: selectedMkh,
+                items: mkhOptions.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 12)))).toList(),
+                onChanged: (v) => selectedMkh = v ?? selectedMkh,
+                decoration: const InputDecoration(labelText: "Діагноз МКХ-10"),
+              ),
+              TextField(controller: goalCtrl, decoration: const InputDecoration(labelText: "Початкова SMART-ціль")),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Скасувати")),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameCtrl.text.isEmpty) return;
+              final newPatientMap = {
+                "id": DateTime.now().millisecondsSinceEpoch.toString(),
+                "fullName": nameCtrl.text,
+                "age": int.tryParse(ageCtrl.text) ?? 30,
+                "chamber": chamberCtrl.text.isEmpty ? "ВІТ" : chamberCtrl.text,
+                "diagnosis": selectedMkh,
+                "currentSmartGoal": goalCtrl.text.isEmpty ? "Мобілізація за протоколом" : goalCtrl.text,
+              };
+              _patients.add(Patient.fromMap(newPatientMap));
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('patients_list', json.encode(_patients.map((p) => p.toMap()).toList()));
+              _filterPatients();
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text("Зберегти"),
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         title: const Text("ВІТ Реабілітація", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1, color: Colors.white),
+            onPressed: _showAddPatientDialog,
+            tooltip: "Додати пацієнта",
+          )
+        ],
       ),
       body: Column(
         children: [
@@ -112,12 +181,17 @@ class _MainListScreenState extends State<MainListScreen> {
                     itemCount: _filteredPatients.length,
                     itemBuilder: (context, index) {
                       final patient = _filteredPatients[index];
+                      // Безпечно витягуємо дані
+                      final Map<String, dynamic> pMap = patient.toMap();
+                      final String chamber = pMap['chamber'] ?? 'ВІТ';
+                      final String diagnosis = pMap['diagnosis'] ?? 'Діагноз не вказано';
+
                       return Card(
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         child: ListTile(
                           leading: const CircleAvatar(backgroundColor: Color(0xFF334155), child: Icon(Icons.person, color: Colors.white)),
                           title: Text(patient.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          subtitle: Text(patient.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                          subtitle: Text("$chamber • $diagnosis", maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => DashboardScreen(patient: patient))).then((_) => _loadPatients()),
                         ),
