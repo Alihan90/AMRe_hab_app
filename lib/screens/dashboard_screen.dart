@@ -28,7 +28,7 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text("Карта Пацієнта", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text("Карта Пацієнта", style: TextStyle(color: Colors.white, fontWeight: Colors.bold, fontSize: 16)),
         actions: [
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
@@ -42,7 +42,6 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Картка пацієнта з даними
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -78,7 +77,6 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
             const Text("Модулі та Інструменти", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
             const SizedBox(height: 16),
             
-            // Плитки модулів
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
