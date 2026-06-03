@@ -68,7 +68,7 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                     ),
                   ),
                   subtitle: Padding(
-                    padding: const EdgeInsets.top(4.0),
+                    padding: const EdgeInsets.only(top: 4.0), // ОСЬ ТУТ ВИПРАВЛЕНО ПОМИЛКУ
                     child: Text(
                       "МКФ: ${scale.icfCategory}",
                       style: TextStyle(
@@ -126,7 +126,7 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                     ),
                   ),
 
-                // Кнопка, яка повертає вибрану шкалу назад у home_screen.dart
+                // Кнопка, яка повертає вибрану шкалу назад
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 12.0, top: 4.0),
                   child: Row(
@@ -134,7 +134,6 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                     children: [
                       TextButton.icon(
                         onPressed: () {
-                          // Повертаємо об'єкт шкали назад у картку пацієнта
                           Navigator.pop(context, scale);
                         },
                         icon: const Icon(Icons.play_arrow, color: Colors.teal),
