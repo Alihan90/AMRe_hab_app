@@ -1,4 +1,4 @@
-name: Flutter CI Main (New Project)
+name: Flutter CI Main
 
 on:
   push:
@@ -24,8 +24,10 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Install Dependencies
-        run: flutter pub get
+      - name: Reconstruct Android Project
+        run: |
+          flutter create --platforms=android --project-name=amre_hab_app .
+          flutter pub get
 
       - name: Compile Application APK
         run: flutter build apk --release --no-tree-shake-icons
