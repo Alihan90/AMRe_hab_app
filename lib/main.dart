@@ -14,13 +14,16 @@ class RehabApp extends StatelessWidget {
     return MaterialApp(
       title: 'МКФ Реабілітаційний Комплекс',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.teal, scaffoldBackgroundColor: Colors.grey.shade50),
+      theme: ThemeData(
+        primarySwatch: Colors.teal, 
+        scaffoldBackgroundColor: Colors.grey.shade50
+      ),
       home: const MainDashboard(),
     );
   }
 }
 
-// ГЛОБАЛЬНА БАЗА ПАЦІЄНТІВ ДЛЯ РОБОТИ ДОДАТКУ
+// ГЛОБАЛЬНА БАЗА ПАЦІЄНТІВ
 List<Map<String, dynamic>> globalPatients = [
   {
     "id": "p1",
@@ -28,7 +31,14 @@ List<Map<String, dynamic>> globalPatients = [
     "age": 45,
     "mkch10": "I63.3 (Ішемічний інсульт)",
     "icfCodes": ["b730 (Сила м'язів)", "d450 (Ходьба)"],
-    "history": [{"scaleId": "ims", "date": "2026-06-01", "score": 4, "interpretation": "Помірна мобільність"}],
+    "history": [
+      {
+        "scaleId": "ims", 
+        "date": "2026-06-01", 
+        "score": 4, 
+        "interpretation": "Помірна мобільність"
+      }
+    ],
     "smartGoal": "Пацієнт зможе самостійно проходити 50 метрів за допомогою ходунків до 20.06.2026 для відновлення побутової незалежності.",
     "exercises": ["Контрольоване дихання", "Пасивні/активні вправи в ліжку"]
   }
@@ -43,17 +53,17 @@ class MainDashboard extends StatefulWidget {
 
 class _MainDashboardState extends State<MainDashboard> {
   String _searchQuery = "";
-  String _currentScreen = "dashboard"; // Навігаційні екрани: dashboard, scale_catalog, patient_card, create_patient, test_exec
+  String _currentScreen = "dashboard"; // Екрани: dashboard, scale_catalog, patient_card, create_patient, test_exec
   Map<String, dynamic>? _selectedPatient;
   ClinicalScale? _selectedScale;
 
-  // Тимчасові змінні для створення пацієнта
+  // Контролери для створення пацієнта
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   String _selectedMckh = "I63.3 (Ішемічний інсульт)";
   final List<String> _selectedIcf = [];
 
-  // Тимчасові змінні для тестування
+  // Змінна для збереження балів тесту
   int _testScore = 0;
 
   @override
@@ -98,11 +108,12 @@ class _MainDashboardState extends State<MainDashboard> {
   // ЕКРАН 1: ГОЛОВНЕ МЕНЮ (DASHBOARD)
   // ==========================================
   Widget _screenDashboard() {
-    final filteredPatients = globalPatients.where((p) => p['name'].toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+    final filteredPatients = globalPatients
+        .where((p) => p['name'].toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
 
     return Column(
       children: [
-        // Панель пошуку та швидких дій
         Container(
           padding: const EdgeInsets.all(16),
           color: Colors.teal.shade700,
@@ -115,7 +126,10 @@ class _MainDashboardState extends State<MainDashboard> {
                   prefixIcon: const Icon(Icons.search),
                   fillColor: Colors.white,
                   filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30), 
+                    borderSide: BorderSide.none
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -280,10 +294,8 @@ class _MainDashboardState extends State<MainDashboard> {
         Text("Вік: ${p['age']} р. | Код МКХ-10: ${p['mkch10']}"),
         const Divider(),
         
-        // Блок Смарт Конструктора
         Card(
           color: Colors.amber.shade50,
-          borderOnForeground: true,
           shape: RoundedRectangleBorder(side: BorderSide(color: Colors.amber.shade300), borderRadius: BorderRadius.circular(8)),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -315,7 +327,10 @@ class _MainDashboardState extends State<MainDashboard> {
         const SizedBox(height: 16),
         const Text("📜 Проведені оцінки (Динаміка):", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         if (p['history'].isEmpty)
-          const Text("Жодних тестувань ще не проведено")
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Text("Жодних тестувань ще не проведено"),
+          )
         else
           ...p['history'].map<Widget>((h) {
             return Card(
@@ -381,9 +396,14 @@ ${p['exercises'].map((ex) => "- $ex").join('\n')}
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("📄 Виписний документ сформовано!"),
-        content: SingleChildScrollView(child: Text(docText, style: const TextStyle(fontFamily: 'monospace', fontSize: 12))),
+        content: SingleChildScrollView(
+          child: Text(docText, style: const TextStyle(fontFamily: 'monospace', fontSize: 12))
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const const Text("Закрити")),
+          TextButton(
+            onPressed: () => Navigator.pop(context), 
+            child: const Text("Закрити")
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -399,7 +419,7 @@ ${p['exercises'].map((ex) => "- $ex").join('\n')}
   }
 
   // ==========================================
-  // ЕКРАН 4: КАТАЛОГ 16 ШКАЛ (З ПОШУКОМ І ПОЯСНЕННЯМИ)
+  // ЕКРАН 4: КАТАЛОГ 16 ШКАЛ
   // ==========================================
   Widget _screenScaleCatalog() {
     final scales = ClinicalData.allScales;
@@ -478,54 +498,3 @@ ${p['exercises'].map((ex) => "- $ex").join('\n')}
             value: opt.score,
             groupValue: _testScore,
             onChanged: (val) => setState(() => _testScore = val!),
-          );
-        }).toList(),
-
-        const Spacer(),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-              onPressed: () => setState(() => _currentScreen = "scale_catalog"),
-              child: const Text("Назад до шкал"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-              onPressed: () {
-                // Автоматичний розрахунок результатів та формування SMART цілей
-                String interpretation = "Стан пацієнта стабільний за шкалою ${s.id.toUpperCase()}";
-                String dynamicGoal = "Пацієнт відновить функціональний стан за МКФ на основі тесту ${s.id.toUpperCase()}.";
-
-                if (s.id == "ims") {
-                  interpretation = _testScore <= 3 ? "Критично низька мобільність" : "Помірна мобільність";
-                  dynamicGoal = "Пацієнт зможе пересідати в крісло колісне з мінімальною підтримкою до 2 тижнів для адаптації (домен МКФ d410).";
-                } else if (s.id == "mrc") {
-                  interpretation = _testScore < 48 ? "Синдром ICUAW (М'язова слабкість ВІТ)" : "Нормальна сила м'язів";
-                  dynamicGoal = "Збільшити м'язову силу кінцівок до 4+ балів за шкалою MRC за 10 днів терапії (домен МКФ b730).";
-                }
-
-                // Зберігаємо результати у вибраного пацієнта, якщо він активований
-                if (_selectedPatient != null) {
-                  _selectedPatient!['history'].insert(0, {
-                    "scaleId": s.id,
-                    "date": "2026-06-03",
-                    "score": _testScore,
-                    "interpretation": interpretation
-                  });
-                  _selectedPatient!['smartGoal'] = dynamicGoal; // Автоматична генерація в Конструктор!
-                }
-
-                setState(() {
-                  _currentScreen = _selectedPatient != null ? "patient_card" : "dashboard";
-                  _testScore = 0;
-                });
-              },
-              child: const Text("Зберегти в карту та ІРП"),
-            ),
-          ],
-        )
-      ],
-    );
-  }
-}
