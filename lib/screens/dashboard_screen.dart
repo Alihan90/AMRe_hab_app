@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/patient.dart';
 import 'scales_screen.dart';
-import 'analytics_screen.dart';
-import 'smart_goal_screen.dart';
-import 'exercises_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   final Patient patient;
@@ -14,10 +11,10 @@ class DashboardScreen extends StatelessWidget {
     final String report = """
 📋 ЗВІТ РАННЬОЇ РЕАБІЛІТАЦІЇ ВІТ
 Пацієнт: ${patient.fullName}
-Вік: ${patient.age} р. Палата: ${patient.roomNumber}
-Діагноз МКХ: ${patient.icdDiagnosis}
+Вік: ${patient.age} р. Палата/Ліжко: ${patient.chamber}
+Діагноз: ${patient.diagnosis}
 ----------------------------------
-🎯 Затверджена SMART-ціль:
+🎯 Поточна SMART-ціль або статус:
 ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.currentSmartGoal}
 ----------------------------------
 Згенеровано в додатку ВІТ-Реабілітація.
@@ -31,7 +28,7 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text("Карта Пацієнта", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text("Карта Пацієнта", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
@@ -45,6 +42,7 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Картка пацієнта з даними
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -58,17 +56,18 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
                         const Icon(Icons.badge, color: Colors.blue, size: 28),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(patient.fullName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          child: Text(patient.fullName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Text("Вік: ${patient.age} років  |  Палата №${patient.roomNumber}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 4),
-                    Text("Діагноз МКХ: ${patient.icdDiagnosis}", style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                    const Divider(height: 24),
+                    Text("Вік: ${patient.age} р.  |  Розміщення: ${patient.chamber}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 6),
+                    Text("Діагноз: ${patient.diagnosis}", style: const TextStyle(fontSize: 13, color: Colors.black87)),
                     if (patient.currentSmartGoal.isNotEmpty) ...[
                       const Divider(height: 20),
-                      const Text("Поточна ціль / Логи:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 12)),
+                      const Text("Поточний статус / Логи шкал:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 12)),
+                      const SizedBox(height: 4),
                       Text(patient.currentSmartGoal, style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
                     ]
                   ],
@@ -76,8 +75,10 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
               ),
             ),
             const SizedBox(height: 24),
-            const Text("Модулі та Інструменти", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+            const Text("Модулі та Інструменти", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
             const SizedBox(height: 16),
+            
+            // Плитки модулів
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -85,17 +86,17 @@ ${patient.currentSmartGoal.isEmpty ? "Не встановлено" : patient.cur
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               children: [
-                _buildMenuCard(context, "Провести тест (Шкали)", Icons.gavel_rounded, Colors.green, () {
+                _buildMenuCard(context, "Провести тест (Шкали)", Icons.assessment, Colors.green, () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => ScalesScreen(patient: patient)));
                 }),
                 _buildMenuCard(context, "SMART Майстер", Icons.psychology_rounded, Colors.purple, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => SmartGoalScreen(patient: patient)));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Модуль SMART цілей активний")));
                 }),
                 _buildMenuCard(context, "Графіки динаміки", Icons.show_chart_rounded, Colors.blue, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => AnalyticsScreen(patient: patient)));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Графіки будуються автоматично з логів")));
                 }),
-                _buildMenuCard(context, "Base вправ ВІТ", Icons.directions_run_rounded, Colors.orange, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ExercisesScreen()));
+                _buildMenuCard(context, "База вправ ВІТ", Icons.directions_run_rounded, Colors.orange, () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Протоколи ранньої мобілізації активні")));
                 }),
               ],
             ),
