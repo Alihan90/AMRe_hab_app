@@ -14,18 +14,12 @@ class RehabApp extends StatelessWidget {
     return MaterialApp(
       title: 'Клінічний Комплекс ФТ',
       debugShowCheckedModeBanner: false,
-      // Підтримка локалізації для коректного введення та відображення дат/тексту
-      supportedLocales: const [
-        Locale('uk', 'UA'),
-        Locale('en', 'US'),
-      ],
+      // Налаштування локалізації для коректного відображення системних елементів
+      supportedLocales: const [Locale('uk', 'UA'), Locale('en', 'US')],
       theme: ThemeData(
         primarySwatch: Colors.teal,
         scaffoldBackgroundColor: Colors.grey.shade50,
-        cardTheme: const CardTheme(
-          elevation: 3, 
-          margin: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        ),
+        cardTheme: const CardTheme(elevation: 3, margin: EdgeInsets.symmetric(vertical: 6, horizontal: 4)),
       ),
       home: const MainDashboard(),
     );
@@ -46,12 +40,7 @@ List<Map<String, dynamic>> globalPatients = [
         "id": "s_1",
         "date": "2026-06-02",
         "scalesData": [
-          {
-            "scaleId": "ims", 
-            "scaleName": "IMS", 
-            "score": 3, 
-            "interpretation": "Активне утримання сидячого положення на краю ліжка"
-          }
+          {"scaleId": "ims", "scaleName": "IMS", "score": 3, "interpretation": "Активне утримання сидячого положення на краю ліжка"}
         ],
         "assignedExercises": ["Діафрагмальне дихання", "Пасивна суглобова гімнастика"],
         "smartGoal": "Пацієнт зможе самостійно утримувати положення сидячи на краю ліжка (домен d415) більше 5 хвилин для підготовки до вертикалізації до 08.06.2026."
@@ -68,13 +57,18 @@ class MainDashboard extends StatefulWidget {
 }
 
 class _MainDashboardState extends State<MainDashboard> {
-  String _currentScreen = "dashboard"; // dashboard, patients_list, create_patient, patient_card, scales_catalog, mckh_catalog, exercises_catalog, test_exec
+  // =========================================================
+  // ГЛОБАЛЬНИЙ ФОРМАТТЕР ДЛЯ ТЕКСТОВИХ ПОЛІВ (УКР / ENG / АПОСТРОФ / ПРОБІЛ / ДЕФІС)
+  // =========================================================
+  final FilteringTextInputFormatter ukrEngFormatter = FilteringTextInputFormatter.allow(
+    RegExp(r"[a-zA-Zа-яА-ЯіІїЇєЄґҐʼ\s-]")
+  );
+
+  String _currentScreen = "dashboard"; // dashboard, patients_list, create_patient, patient_card, scales_catalog, test_exec
   
   String _globalSearch = "";
   String _patientSearch = "";
   String _scaleSearch = "";
-  String _mckhSearch = "";
-  String _exerciseSearch = "";
 
   Map<String, dynamic>? _selectedPatient;
   Map<String, dynamic>? _activeSession; 
@@ -92,8 +86,6 @@ class _MainDashboardState extends State<MainDashboard> {
   final List<String> _chosenIcfCodes = [];
   List<String> _tempSelectedExercises = [];
 
-  final _formKey = GlobalKey<FormState>();
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,11 +101,10 @@ class _MainDashboardState extends State<MainDashboard> {
             )
         ],
       ),
-      body: PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, result) {
-          if (didPop) return;
+      body: WillPopScope(
+        onWillPop: () async {
           _handleBackButton();
+          return false;
         },
         child: _buildBody(),
       ),
@@ -127,8 +118,6 @@ class _MainDashboardState extends State<MainDashboard> {
       case "create_patient": return "📝 Формування Карти";
       case "patient_card": return "🗂 Електронна Карта Пацієнта";
       case "scales_catalog": return "📊 Діагностичні Шкали (16)";
-      case "mckh_catalog": return "🩺 Довідник МКХ-10";
-      case "exercises_catalog": return "🏋️‍♂️ Реабілітаційні Комплекси";
       case "test_exec": return "⏱ Покроковий Клінічний Тест";
       default: return "Клінічний Комплекс";
     }
@@ -153,15 +142,13 @@ class _MainDashboardState extends State<MainDashboard> {
       case "create_patient": return _screenCreatePatient();
       case "patient_card": return _screenPatientCard();
       case "scales_catalog": return _screenScalesCatalog();
-      case "mckh_catalog": return _screenMckhCatalog();
-      case "exercises_catalog": return _screenExercisesCatalog();
       case "test_exec": return _screenTestExecutor();
       default: return _screenDashboard();
     }
   }
 
   // =========================================================
-  // ЕКРАН: ГОЛОВНЕ МЕНЮ
+  // ЕКРАН: ГОЛОВНЕ МЕНЮ (ПОШУК З ПОДТРИМКОЮ УКР/ENG)
   // =========================================================
   Widget _screenDashboard() {
     return Column(
@@ -175,6 +162,7 @@ class _MainDashboardState extends State<MainDashboard> {
               const Text("Глобальний пошук пацієнта (Укр/Eng):", style: TextStyle(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 6),
               TextField(
+                inputFormatters: [ukrEngFormatter], // ВАЛІДАЦІЯ ТУТ
                 onChanged: (v) => setState(() => _globalSearch = v),
                 decoration: InputDecoration(
                   hintText: "Введіть ПІБ пацієнта...",
@@ -197,9 +185,7 @@ class _MainDashboardState extends State<MainDashboard> {
                 mainAxisSpacing: 14,
                 children: [
                   _buildMenuCard("👥 Пацієнти", "Реєстр, редагування карт та сесій", Colors.blue.shade700, () => setState(() => _currentScreen = "patients_list")),
-                  _buildMenuCard("📊 Шкали Оцінки", "16 шкал, покрокові інструкції", Colors.teal.shade700, () => setState(() => _currentScreen = "scales_catalog")),
-                  _buildMenuCard("🩺 МКХ-10", "Повний спектр кодів та домени МКФ", Colors.purple.shade700, () => setState(() => _currentScreen = "mckh_catalog")),
-                  _buildMenuCard("🏋️‍♂️ Вправи", "Повні протоколи терапевтичних втручань", Colors.orange.shade800, () => setState(() => _currentScreen = "exercises_catalog")),
+                  _buildMenuCard("📊 Шкали Оцінки", "16 шкал з інструкціями та тестами", Colors.teal.shade700, () => setState(() => _currentScreen = "scales_catalog")),
                 ],
               ),
         )
@@ -261,6 +247,7 @@ class _MainDashboardState extends State<MainDashboard> {
       child: Column(
         children: [
           TextField(
+            inputFormatters: [ukrEngFormatter], // ВАЛІДАЦІЯ ТУТ
             onChanged: (v) => setState(() => _patientSearch = v),
             decoration: const InputDecoration(labelText: "Пошук пацієнта (укр/eng)...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
           ),
@@ -335,101 +322,89 @@ class _MainDashboardState extends State<MainDashboard> {
   // ЕКРАН: СТВОРЕННЯ КАРТИ ПАЦІЄНТА (З ПІДТРИМКОЮ УКРАЇНСЬКОЇ)
   // =========================================================
   Widget _screenCreatePatient() {
-    return Form(
-      key: _formKey,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextFormField(
-            controller: _nameController,
-            // Дозволяємо українські літери (І, Є, Ї, Ґ, апостроф), англійську, дефіси та пробіли
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Zа-яА-ЯіІїЇєЄґҐʼ\s-]"))],
-            decoration: const InputDecoration(labelText: "ПІБ Пацієнта (українською або англійською)", border: OutlineInputBorder()),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) return "Будь ласка, введіть ПІБ";
-              return null;
-            },
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        TextField(
+          controller: _nameController,
+          inputFormatters: [ukrEngFormatter], // ВАЛІДАЦІЯ ТУТ (ПІБ УКР/ENG)
+          decoration: const InputDecoration(labelText: "ПІБ Пацієнта (українською або англійською)", border: OutlineInputBorder()),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _ageController, 
+          keyboardType: TextInputType.number, 
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly], // Тільки цифри для віку
+          decoration: const InputDecoration(labelText: "Вік (повних років)", border: OutlineInputBorder())
+        ),
+        const SizedBox(height: 16),
+        const Text("🩺 Профільний діагноз МКХ-10:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
+          child: DropdownButton<Map<String, String>>(
+            value: _chosenMckh,
+            isExpanded: true,
+            underline: const SizedBox(),
+            items: ClinicalData.mckh10Catalog.map((item) {
+              return DropdownMenuItem(value: item, child: Text("${item['code']} - ${item['name']}", style: const TextStyle(fontSize: 11)));
+            }).toList(),
+            onChanged: (v) => setState(() => _chosenMckh = v!),
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _ageController, 
-            keyboardType: TextInputType.number, 
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(labelText: "Вік (повних років)", border: OutlineInputBorder()),
-            validator: (value) {
-              if (value == null || value.isEmpty) return "Будь ласка, введіть вік";
-              return null;
+        ),
+        const SizedBox(height: 16),
+        const Text("📌 Функціональний дефіцит МКФ:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+        ...ClinicalData.icfDomains.map((domain) {
+          final str = "${domain['code']} ${domain['name']}";
+          return CheckboxListTile(
+            title: Text(str, style: const TextStyle(fontSize: 12)),
+            value: _chosenIcfCodes.contains(str),
+            onChanged: (val) {
+              setState(() { if (val!) { _chosenIcfCodes.add(str); } else { _chosenIcfCodes.remove(str); } });
             },
-          ),
-          const SizedBox(height: 16),
-          const Text("🩺 Профільний діагноз МКХ-10:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
-            child: DropdownButton<Map<String, String>>(
-              value: _chosenMckh,
-              isExpanded: true,
-              underline: const SizedBox(),
-              items: ClinicalData.mckh10Catalog.map((item) {
-                return DropdownMenuItem(value: item, child: Text("${item['code']} - ${item['name']}", style: const TextStyle(fontSize: 11)));
-              }).toList(),
-              onChanged: (v) => setState(() => _chosenMckh = v!),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text("📌 Функціональний дефіцит МКФ:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
-          ...ClinicalData.icfDomains.map((domain) {
-            final str = "${domain['code']} ${domain['name']}";
-            return CheckboxListTile(
-              title: Text(str, style: const TextStyle(fontSize: 12)),
-              value: _chosenIcfCodes.contains(str),
-              onChanged: (val) {
-                setState(() { if (val!) { _chosenIcfCodes.add(str); } else { _chosenIcfCodes.remove(str); } });
-              },
-            );
-          }).toList(),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800, padding: const EdgeInsets.all(16)),
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                final newPatient = {
-                  "id": "p_${DateTime.now().millisecondsSinceEpoch}",
-                  "name": _nameController.text.trim(),
-                  "age": int.tryParse(_ageController.text) ?? 50,
-                  "mkch10Code": _chosenMckh['code'],
-                  "mkch10Name": _chosenMckh['name'],
-                  "icfCodes": List<String>.from(_chosenIcfCodes),
-                  "sessions": [
-                    {
-                      "id": "s_${DateTime.now().millisecondsSinceEpoch}",
-                      "date": "2026-06-03",
-                      "scalesData": [],
-                      "assignedExercises": <String>[],
-                      "smartGoal": "Ціль за SMART адаптується після проведення тестів."
-                    }
-                  ]
-                };
-                globalPatients.add(newPatient);
-                _nameController.clear(); _ageController.clear(); _chosenIcfCodes.clear();
-                setState(() {
-                  _selectedPatient = newPatient;
-                  _activeSession = newPatient['sessions'].first;
-                  _tempSelectedExercises = [];
-                  _currentScreen = "patient_card";
-                });
-              }
-            },
-            child: const Text("ЗБЕРЕГТИ КАРТКУ В БАЗУ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          )
-        ],
-      ),
+          );
+        }).toList(),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800, padding: const EdgeInsets.all(16)),
+          onPressed: () {
+            if (_nameController.text.isNotEmpty) {
+              final newPatient = {
+                "id": "p_${DateTime.now().millisecondsSinceEpoch}",
+                "name": _nameController.text,
+                "age": int.tryParse(_ageController.text) ?? 50,
+                "mkch10Code": _chosenMckh['code'],
+                "mkch10Name": _chosenMckh['name'],
+                "icfCodes": List<String>.from(_chosenIcfCodes),
+                "sessions": [
+                  {
+                    "id": "s_${DateTime.now().millisecondsSinceEpoch}",
+                    "date": "2026-06-03",
+                    "scalesData": [],
+                    "assignedExercises": <String>[],
+                    "smartGoal": "Ціль за SMART адаптується після проведення тестів."
+                  }
+                ]
+              };
+              globalPatients.add(newPatient);
+              _nameController.clear(); _ageController.clear(); _chosenIcfCodes.clear();
+              setState(() {
+                _selectedPatient = newPatient;
+                _activeSession = newPatient['sessions'].first;
+                _tempSelectedExercises = [];
+                _currentScreen = "patient_card";
+              });
+            }
+          },
+          child: const Text("ЗБЕРЕГТИ КАРТКУ В БАЗУ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        )
+      ],
     );
   }
 
   // =========================================================
-  // ЕКРАН: ЕЛЕКТРОННА КАРТА + РЕДАГУВАННЯ ДАНИХ ТА СЕСІЙ
+  // ЕКРАН: ЕЛЕКТРОННА КАРТА + ПОВНЕ РЕДАГУВАННЯ ДАНИХ ТА СЕСІЙ
   // =========================================================
   Widget _screenPatientCard() {
     final p = _selectedPatient!;
@@ -442,17 +417,12 @@ class _MainDashboardState extends State<MainDashboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             ElevatedButton.icon(onPressed: () => setState(() => _currentScreen = "patients_list"), icon: const Icon(Icons.arrow_back), label: const Text("Реєстр")),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple.shade900),
-              onPressed: () => _showComprehensiveClinicalReport(p),
-              icon: const Icon(Icons.print_outlined, color: Colors.white),
-              label: const Text("ОФІЦІЙНИЙ ЕПІКРИЗ (ОБ'ЄДНАНИЙ)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-            )
+            const Text("📊 EHR Стан", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal))
           ],
         ),
         const SizedBox(height: 12),
         
-        // Паспортна частина з кнопкою повного редагування
+        // Паспортна частина з кнопкою редагування ПІБ, Віку, МКХ-10
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.teal.shade200)),
@@ -464,7 +434,7 @@ class _MainDashboardState extends State<MainDashboard> {
                 children: [
                   Expanded(child: Text(p['name'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal))),
                   IconButton(
-                    icon: const Icon(Icons.edit_note, color: Colors.teal, size: 28),
+                    icon: const Icon(Icons.edit_note, color: Colors.teal),
                     onPressed: () => _showEditPatientBaseInfoDialog(p),
                     tooltip: "Редагувати ПІБ, Вік та МКХ-10",
                   )
@@ -493,7 +463,7 @@ class _MainDashboardState extends State<MainDashboard> {
           ],
         ),
         const SizedBox(height: 6),
-        SizedBox(
+        Container(
           height: 45,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
@@ -533,23 +503,15 @@ class _MainDashboardState extends State<MainDashboard> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text("📋 Дані візиту від ${_activeSession!['date']}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                          tooltip: "Видалити цю сесію",
-                          onPressed: () => _deleteCurrentSession(p, _activeSession!),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.share, size: 20, color: Colors.teal),
-                          onPressed: () => _showSingleSessionReport(p, _activeSession!),
-                        ),
-                      ],
-                    )
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                      tooltip: "Видалити цю сесію",
+                      onPressed: () => _deleteCurrentSession(p, _activeSession!),
+                    ),
                   ],
                 ),
                 
-                // РЕДАГУВАННЯ SMART-ЦІЛІ
+                // РЕДАГУВАННЯ SMART-ЦІЛІ (З ПІДТРИМКОЮ УКРАЇНСЬКОЇ)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -566,126 +528,143 @@ class _MainDashboardState extends State<MainDashboard> {
                   decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.amber.shade200)),
                   child: Text(_activeSession!['smartGoal'], style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
                 ),
+                
                 const SizedBox(height: 12),
-
-                // РЕДАГУВАННЯ РЕЗУЛЬТАТІВ ШКАЛ
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text("📊 Динаміка шкал:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.teal)),
-                    TextButton.icon(
-                      onPressed: () => setState(() => _currentScreen = "scales_catalog"),
-                      icon: const Icon(Icons.add, size: 14),
-                      label: const Text("Провести тест", style: TextStyle(fontSize: 11)),
-                    )
-                  ],
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800, minimumSize: const Size.fromHeight(36)),
+                  onPressed: () => setState(() => _currentScreen = "scales_catalog"),
+                  icon: const Icon(Icons.analytics_outlined, color: Colors.white),
+                  label: const Text("Запустити тестування шкалами на цей день", style: TextStyle(color: Colors.white)),
                 ),
-                ...(_activeSession!['scalesData'] as List).map((scale) {
-                  return ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text("${scale['scaleName']}: ${scale['score']} балів", style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(scale['interpretation'], style: const TextStyle(fontSize: 11)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 16),
-                      onPressed: () {
-                        setState(() {
-                          (_activeSession!['scalesData'] as List).removeWhere((s) => s['scaleId'] == scale['scaleId']);
-                        });
-                      },
-                    ),
-                  );
-                }).toList(),
-
-                const Divider(),
-                // РЕДАГУВАННЯ ВПРАВ В СЕСІЇ
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text("🏋️‍♂️ Призначені вправи:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange.shade900)),
-                    TextButton.icon(
-                      onPressed: () => setState(() => _currentScreen = "exercises_catalog"),
-                      icon: const Icon(Icons.edit, size: 14),
-                      label: const Text("Змінити комплекс", style: TextStyle(fontSize: 11)),
-                    )
-                  ],
-                ),
-                if (_tempSelectedExercises.isEmpty) 
-                  const Text("Комплекс не сформовано.", style: TextStyle(color: Colors.grey, fontSize: 11))
-                else 
-                  ..._tempSelectedExercises.map((ex) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2.0),
-                    child: Text("• $ex", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                  )).toList(),
+                
+                const SizedBox(height: 12),
+                // СПИСОК ШКАЛ З МОЖЛИВІСТЮ ВИДАЛЕННЯ/РЕДАГУВАННЯ РЕЗУЛЬТАТУ
+                const Text("Результати шкал за цей огляд:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                if ((_activeSession!['scalesData'] as List).isEmpty)
+                  const Padding(padding: EdgeInsets.all(8.0), child: Text("Шкали ще не проводились.", style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic)))
+                else
+                  ...(_activeSession!['scalesData'] as List).map<Widget>((sc) {
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Chip(label: Text(sc['scaleName'], style: const TextStyle(fontSize: 10, color: Colors.white)), backgroundColor: Colors.teal),
+                      title: Text("Результат: ${sc['score']} балів", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      subtitle: Text(sc['interpretation'], style: const TextStyle(fontSize: 11)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 16, color: Colors.orange),
+                            onPressed: () => _showEditScaleScoreDialog(_activeSession!, sc),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline, size: 16, color: Colors.red),
+                            onPressed: () {
+                              setState(() {
+                                (_activeSession!['scalesData'] as List).removeWhere((element) => element['scaleId'] == sc['scaleId']);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
               ],
             ),
           ),
-        )
+        ),
+
+        const SizedBox(height: 14),
+        // ВПРАВИ В ІРП
+        const Text("🏋️‍♂️ Призначення фізичних вправ на цей день:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.teal)),
+        ...ClinicalData.exercisesCatalog.map((cat) {
+          return ExpansionTile(
+            title: Text(cat['category'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.indigo)),
+            children: (cat['items'] as List).map<Widget>((ex) {
+              final isChecked = _tempSelectedExercises.contains(ex['name']);
+              return CheckboxListTile(
+                title: Text(ex['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                subtitle: Text(ex['desc'], style: const TextStyle(fontSize: 11)),
+                value: isChecked,
+                onChanged: (val) {
+                  setState(() { if (val!) { _tempSelectedExercises.add(ex['name']); } else { _tempSelectedExercises.remove(ex['name']); } });
+                },
+              );
+            }).toList(),
+          );
+        }).toList(),
+        
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade900, padding: const EdgeInsets.all(14)),
+          onPressed: () {
+            setState(() { _activeSession!['assignedExercises'] = List<String>.from(_tempSelectedExercises); });
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Colors.green, content: Text("💾 Зміни вправ успішно зафіксовано в ІРП!")));
+          },
+          icon: const Icon(Icons.save, color: Colors.white),
+          label: const Text("💾 ЗБЕРЕГТИ КОМПЛЕКС ВПРАВ В ІРП ЦЬОГО ДНЯ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 30),
       ],
     );
   }
 
   // =========================================================
-  // ДІАЛОГОВІ ВІКНА ДЛЯ РЕДАГУВАННЯ
+  // ДІАЛОГОВІ ВІКНА ДЛЯ РЕДАГУВАННЯ ДАНИХ (З ВАЛІДАЦІЄЮ УКР/ENG)
   // =========================================================
   void _showEditPatientBaseInfoDialog(Map<String, dynamic> p) {
-    final nameEditController = TextEditingController(text: p['name']);
-    final ageEditController = TextEditingController(text: p['age'].toString());
-    Map<String, String> selectedMckh = ClinicalData.mckh10Catalog.firstWhere(
-      (m) => m['code'] == p['mkch10Code'], 
-      orElse: () => ClinicalData.mckh10Catalog.first
-    );
+    final _nameEditController = TextEditingController(text: p['name']);
+    final _ageEditController = TextEditingController(text: p['age'].toString());
+    Map<String, String> _tempMckh = ClinicalData.mckh10Catalog.firstWhere((element) => element['code'] == p['mkch10Code'], orElse: () => ClinicalData.mckh10Catalog.first);
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Редагування даних пацієнта"),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameEditController,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Zа-яА-ЯіІїЇєЄґҐʼ\s-]"))],
-                  decoration: const InputDecoration(labelText: "ПІБ Пацієнта"),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: ageEditController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(labelText: "Вік"),
-                ),
-                const SizedBox(height: 15),
-                const Text("МКХ-10 Діагноз:", style: TextStyle(fontWeight: FontWeight.bold)),
-                DropdownButton<Map<String, String>>(
-                  value: selectedMckh,
-                  isExpanded: true,
-                  items: ClinicalData.mckh10Catalog.map((item) {
-                    return DropdownMenuItem(value: item, child: Text("${item['code']} - ${item['name']}", style: const TextStyle(fontSize: 10)));
-                  }).toList(),
-                  onChanged: (v) => setDialogState(() => selectedMckh = v!),
-                ),
-              ],
-            ),
+      builder: (ctx) => AlertDialog(
+        title: const Text("Редагувати базову інформацію"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameEditController, 
+                inputFormatters: [ukrEngFormatter], // ВАЛІДАЦІЯ ТУТ
+                decoration: const InputDecoration(labelText: "ПІБ")
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _ageEditController, 
+                keyboardType: TextInputType.number, 
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(labelText: "Вік")
+              ),
+              const SizedBox(height: 12),
+              const Text("Змінити код МКХ-10:"),
+              DropdownButton<Map<String, String>>(
+                value: _tempMckh,
+                isExpanded: true,
+                items: ClinicalData.mckh10Catalog.map((item) {
+                  return DropdownMenuItem(value: item, child: Text("${item['code']} - ${item['name']}", style: const TextStyle(fontSize: 10)));
+                }).toList(),
+                onChanged: (v) => _tempMckh = v!,
+              ),
+            ],
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Скасувати")),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  p['name'] = nameEditController.text.trim();
-                  p['age'] = int.tryParse(ageEditController.text) ?? p['age'];
-                  p['mkch10Code'] = selectedMckh['code'];
-                  p['mkch10Name'] = selectedMckh['name'];
-                });
-                Navigator.pop(ctx);
-              },
-              child: const Text("Зберегти"),
-            )
-          ],
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Скасувати")),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                p['name'] = _nameEditController.text;
+                p['age'] = int.tryParse(_ageEditController.text) ?? p['age'];
+                p['mkch10Code'] = _tempMckh['code'];
+                p['mkch10Name'] = _tempMckh['name'];
+              });
+              Navigator.pop(ctx);
+            },
+            child: const Text("Зберегти"),
+          )
+        ],
       ),
     );
   }
@@ -695,129 +674,152 @@ class _MainDashboardState extends State<MainDashboard> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Редагувати SMART-ціль сесії"),
+        title: const Text("Редагувати SMART-ціль"),
         content: TextField(
-          controller: _editGoalController,
-          maxLines: 4,
-          decoration: const InputDecoration(border: OutlineInputBorder(), hintText: "Сформулюйте SMART ціль..."),
+          controller: _editGoalController, 
+          inputFormatters: [ukrEngFormatter], // ВАЛІДАЦІЯ ТУТ
+          maxLines: 3, 
+          decoration: const InputDecoration(border: OutlineInputBorder())
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Скасувати")),
+          ElevatedButton(
+            onPressed: () {
+              setState(() { session['smartGoal'] = _editGoalController.text; });
+              Navigator.pop(ctx);
+            },
+            child: const Text("Оновити ціль"),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showEditScaleScoreDialog(Map<String, dynamic> session, Map<String, dynamic> scaleItem) {
+    final _scoreEditController = TextEditingController(text: scaleItem['score'].toString());
+    final _interpEditController = TextEditingController(text: scaleItem['interpretation']);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("Редагувати результат: ${scaleItem['scaleName']}"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _scoreEditController, 
+              keyboardType: TextInputType.number, 
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: "Виставлений бал")
+            ),
+            TextField(
+              controller: _interpEditController, 
+              inputFormatters: [ukrEngFormatter], // ВАЛІДАЦІЯ ТУТ
+              decoration: const InputDecoration(labelText: "Клінічний статус")
+            ),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Скасувати")),
           ElevatedButton(
             onPressed: () {
               setState(() {
-                session['smartGoal'] = _editGoalController.text;
+                scaleItem['score'] = int.tryParse(_scoreEditController.text) ?? scaleItem['score'];
+                scaleItem['interpretation'] = _interpEditController.text;
               });
               Navigator.pop(ctx);
             },
-            child: const Text("Оновити"),
+            child: const Text("Зберегти"),
           )
         ],
       ),
     );
   }
 
+  void _deleteCurrentSession(Map<String, dynamic> p, Map<String, dynamic> session) {
+    final List list = p['sessions'];
+    if (list.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Неможливо видалити єдину сесію пацієнта!")));
+      return;
+    }
+    setState(() {
+      list.removeWhere((element) => element['id'] == session['id']);
+      _activeSession = list.first;
+      _tempSelectedExercises = List<String>.from(_activeSession!['assignedExercises']);
+    });
+  }
+
   void _createNewSessionForSelectedPatient(Map<String, dynamic> p) {
-    final now = DateTime.now();
-    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    final List sessions = p['sessions'];
+    final lastDateStr = sessions.first['date']; 
+    final parts = lastDateStr.split('-');
+    int day = int.parse(parts[2]) + 1;
+    String dayStr = day < 10 ? "0$day" : "$day";
+    String newDate = "${parts[0]}-${parts[1]}-$dayStr";
+
     final newSess = {
-      "id": "s_${now.millisecondsSinceEpoch}",
-      "date": dateStr,
+      "id": "s_${DateTime.now().millisecondsSinceEpoch}",
+      "date": newDate,
       "scalesData": [],
       "assignedExercises": <String>[],
-      "smartGoal": "Ціль за SMART адаптується після проведення тестів."
+      "smartGoal": "Ціль за SMART адаптується після проведення нових вимірів."
     };
+
     setState(() {
-      (p['sessions'] as List).add(newSess);
+      sessions.insert(0, newSess); 
       _activeSession = newSess;
       _tempSelectedExercises = [];
     });
   }
 
-  void _deleteCurrentSession(Map<String, dynamic> patient, Map<String, dynamic> session) {
-    final List list = patient['sessions'];
-    if (list.length <= 1) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Неможливо видалити єдину сесію пацієнта.")));
-      return;
-    }
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Видалити цю сесію?"),
-        content: Text("Ви дійсно хочете видалити сесію за дату ${session['date']}?"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Скасувати")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() {
-                list.removeWhere((s) => s['id'] == session['id']);
-                _activeSession = list.first;
-                _tempSelectedExercises = List<String>.from(_activeSession!['assignedExercises']);
-              });
-              Navigator.pop(ctx);
-            },
-            child: const Text("Видалити", style: TextStyle(color: Colors.white)),
-          )
-        ],
-      ),
-    );
-  }
-
   // =========================================================
-  // ЕКРАН: 16 КЛІНІЧНИХ ШКАЛ + ІНСТРУКТИВНИЙ БЛОК
+  // ЕКРАН: КАТАЛОГ ШКАЛ ОЦІНКИ ТА ПОКРОКОВИЙ ТЕСТЕР + ІНСТРУКЦІЇ
   // =========================================================
   Widget _screenScalesCatalog() {
-    final list = ClinicalData.scales16.where((s) => s.name.toLowerCase().contains(_scaleSearch.toLowerCase())).toList();
+    final filtered = ClinicalData.allScales.where((s) => s.name.toLowerCase().contains(_scaleSearch.toLowerCase()) || s.fullName.toLowerCase().contains(_scaleSearch.toLowerCase())).toList();
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
         children: [
           TextField(
+            inputFormatters: [ukrEngFormatter], // ВАЛІДАЦІЯ ТУТ
             onChanged: (v) => setState(() => _scaleSearch = v),
-            decoration: const InputDecoration(labelText: "Пошук за назвою клінічної шкали...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: "Пошук серед 16 шкал оцінки...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Expanded(
             child: ListView.builder(
-              itemCount: list.length,
+              itemCount: filtered.length,
               itemBuilder: (context, i) {
-                final scale = list[i];
+                final s = filtered[i];
                 return Card(
+                  color: Colors.teal.shade50,
                   child: ExpansionTile(
-                    leading: const Icon(Icons.analytics, color: Colors.teal),
-                    title: Text(scale.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text("Тип тесту: ${scale.type == 'interactive' ? 'Покроковий' : 'Пряме введення балів'}", style: const TextStyle(fontSize: 11)),
-                    
-                    // Інструктивний методичний блок інтегровано прямо сюди перед початком тестування
+                    title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+                    subtitle: Text(s.fullName, style: const TextStyle(fontSize: 11)),
                     children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        color: Colors.blue.shade50,
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: const [
-                                Icon(Icons.info_outline, color: Colors.blue, size: 18),
-                                SizedBox(width: 6),
-                                Text("Методичні вказівки до шкали", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue)),
-                              ],
-                            ),
-                            const Divider(),
-                            Text("💡 Призначення:\n${scale.description}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 8),
-                            Text("📋 Процедура та інструкція:\n${scale.instructions}", style: const TextStyle(fontSize: 12)),
-                            const SizedBox(height: 12),
-                            if (_selectedPatient == null)
-                              const Text("⚠️ Для запуску тесту оберіть пацієнта в реєстрі!", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12))
-                            else
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800),
-                                onPressed: () => _startScaleTest(scale),
-                                child: Text("ПОЧАТИ ОЦІНЮВАННЯ ДЛЯ: ${_selectedPatient!['name']}", style: const TextStyle(fontSize: 11, color: Colors.white)),
-                              ),
+                            Text("📌 Опис (Навіщо потрібна): ${s.indications}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87)),
+                            const SizedBox(height: 6),
+                            Text("ℹ️ Інструкція (Як проводити): ${s.instruction}", style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.blueGrey)),
+                            const SizedBox(height: 10),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800),
+                              onPressed: () {
+                                setState(() {
+                                  _selectedScale = s;
+                                  _currentQuestionIndex = 0;
+                                  _accumulatedScore = 0;
+                                  _bbsAnswers.clear();
+                                  _currentScreen = "test_exec";
+                                });
+                              },
+                              icon: const Icon(Icons.play_circle_fill, color: Colors.white),
+                              label: Text("ЗАПУСТИТИ ПОВНИЙ ПОКРОКОВИЙ ТЕСТ (${s.questions.length} ПУНКТІВ)", style: const TextStyle(color: Colors.white)),
+                            )
                           ],
                         ),
                       )
@@ -832,298 +834,79 @@ class _MainDashboardState extends State<MainDashboard> {
     );
   }
 
-  void _startScaleTest(ClinicalScale scale) {
-    setState(() {
-      _selectedScale = scale;
-      _currentQuestionIndex = 0;
-      _accumulatedScore = 0;
-      _bbsAnswers = [];
-      _currentScreen = "test_exec";
-    });
-  }
-
-  // =========================================================
-  // ЕКРАН: ВИКОНАННЯ ТЕСТУ (З ІНСТРУКЦІЄЮ ЗВЕРХУ)
-  // =========================================================
   Widget _screenTestExecutor() {
-    final scale = _selectedScale!;
-    
-    if (scale.type != "interactive") {
-      final directController = TextEditingController();
-      return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Пряме введення балів для: ${scale.name}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            TextField(
-              controller: directController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "Загальний набраний бал", border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                final score = int.tryParse(directController.text) ?? 0;
-                _saveScaleResultToActiveSession(scale.id, scale.name, score, "Введено вручну на основі зовнішнього клінічного протоколу.");
-              },
-              child: const Text("Зберегти результат"),
-            )
-          ],
-        ),
-      );
-    }
+    final s = _selectedScale!;
+    final totalQuestions = s.questions.length;
+    final q = s.questions[_currentQuestionIndex];
 
-    final questions = scale.questions!;
-    final currentQ = questions[_currentQuestionIndex];
-
-    return ListView(
-      padding: const EdgeInsets.all(14),
-      children: [
-        LinearProgressIndicator(value: (_currentQuestionIndex + 1) / questions.length, color: Colors.teal),
-        const SizedBox(height: 10),
-        Text("Питання ${_currentQuestionIndex + 1} з ${questions.length}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-        const SizedBox(height: 12),
-        
-        // Інструкція до конкретного підпункту
-        Card(
-          color: Colors.amber.shade50,
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Text(currentQ['question']!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black80)),
-          ),
-        ),
-        const SizedBox(height: 14),
-        
-        ...(currentQ['options'] as List<Map<String, dynamic>>).map((opt) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                backgroundColor: Colors.white,
-                side: BorderSide(color: Colors.teal.shade200)
-              ),
-              onPressed: () {
-                if (scale.id == "bbs") {
-                  _bbsAnswers.add(opt['score'] as int);
-                } else {
-                  _accumulatedScore += opt['score'] as int;
-                }
-
-                if (_currentQuestionIndex < questions.length - 1) {
-                  setState(() { _currentQuestionIndex++; });
-                } else {
-                  int total = _accumulatedScore;
-                  if (scale.id == "bbs") {
-                    total = _bbsAnswers.reduce((a, b) => a + b);
-                  }
-                  String interp = scale.interpret!(total);
-                  _saveScaleResultToActiveSession(scale.id, scale.name, total, interp);
-                }
-              },
-              child: Text("[${opt['score']} б.] ${opt['text']}", style: const TextStyle(color: Colors.black80, fontSize: 12)),
-            ),
-          );
-        }).toList()
-      ],
-    );
-  }
-
-  void _saveScaleResultToActiveSession(String id, String name, int score, String interp) {
-    if (_activeSession != null) {
-      setState(() {
-        final existingList = _activeSession!['scalesData'] as List;
-        existingList.removeWhere((element) => element['scaleId'] == id);
-        existingList.add({
-          "scaleId": id,
-          "scaleName": name,
-          "score": score,
-          "interpretation": interp
-        });
-        _currentScreen = "patient_card";
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Результат шкали $name успішно додано у візит!")));
-    }
-  }
-
-  // =========================================================
-  // ЕКРАН: ДОВІДНИК МКХ-10 / МКФ
-  // =========================================================
-  Widget _screenMckhCatalog() {
-    final list = ClinicalData.mckh10Catalog.where((m) => m['code']!.toLowerCase().contains(_mckhSearch.toLowerCase()) || m['name']!.toLowerCase().contains(_mckhSearch.toLowerCase())).toList();
     return Padding(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            onChanged: (v) => setState(() => _mckhSearch = v),
-            decoration: const InputDecoration(labelText: "Пошук коду або нозології...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
+          LinearProgressIndicator(value: (_currentQuestionIndex + 1) / totalQuestions, backgroundColor: Colors.grey.shade300, color: Colors.teal),
+          const SizedBox(height: 12),
+          Text("Шкала: ${s.fullName}", style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text("Пункт ${_currentQuestionIndex + 1} з $totalQuestions", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.teal)),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade300)),
+            child: Text(q.text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           Expanded(
             child: ListView.builder(
-              itemCount: list.length,
-              itemBuilder: (context, i) {
+              itemCount: q.options.length,
+              itemBuilder: (context, idx) {
+                final opt = q.options[idx];
                 return Card(
                   child: ListTile(
-                    leading: const Icon(Icons.medical_services, color: Colors.purple),
-                    title: Text("${list[i]['code']} - ${list[i]['name']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                );
-              },
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  // =========================================================
-  // ЕКРАН: КОМПЛЕКСИ ВПРАВ + ОНОВЛЕННЯ В КАРТЦІ
-  // =========================================================
-  Widget _screenExercisesCatalog() {
-    final entries = ClinicalData.exerciseCatalog.entries.where((e) => e.key.toLowerCase().contains(_exerciseSearch.toLowerCase()) || e.value.toLowerCase().contains(_exerciseSearch.toLowerCase())).toList();
-    return Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Column(
-        children: [
-          if (_selectedPatient != null)
-            Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.orange.shade50,
-              child: Text("Редагування комплексу для сесії від ${_activeSession!['date']}", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-            ),
-          TextField(
-            onChanged: (v) => setState(() => _exerciseSearch = v),
-            decoration: const InputDecoration(labelText: "Пошук терапевтичних втручань...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: ListView.builder(
-              itemCount: entries.length,
-              itemBuilder: (context, i) {
-                final exName = entries[i].key;
-                final exDesc = entries[i].value;
-                final isAdded = _tempSelectedExercises.contains(exName);
-
-                return Card(
-                  child: ExpansionTile(
-                    title: Text(exName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    trailing: _selectedPatient == null 
-                      ? null 
-                      : IconButton(
-                          icon: Icon(isAdded ? Icons.check_circle : Icons.add_circle_outline, color: isAdded ? Colors.green : Colors.grey),
-                          onPressed: () {
-                            setState(() {
-                              if (isAdded) {
-                                _tempSelectedExercises.remove(exName);
-                              } else {
-                                _tempSelectedExercises.add(exName);
-                              }
-                              _activeSession!['assignedExercises'] = List<String>.from(_tempSelectedExercises);
-                            });
-                          },
-                        ),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Text(exDesc, style: const TextStyle(fontSize: 12, color: Colors.black80)),
-                      )
-                    ],
+                    title: Text(opt.text, style: const TextStyle(fontSize: 13)),
+                    trailing: CircleAvatar(backgroundColor: Colors.teal.shade700, radius: 12, child: Text("${opt.score}", style: const TextStyle(fontSize: 10, color: Colors.white))),
+                    onTap: () => _handleOptionSelected(opt.score),
                   ),
                 );
               },
             ),
           ),
-          if (_selectedPatient != null)
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade900),
-              onPressed: () => setState(() => _currentScreen = "patient_card"),
-              child: const Text("ПОВЕРНУТИСЬ ДО КАРТКИ ПАЦІЄНТА", style: TextStyle(color: Colors.white)),
-            )
         ],
       ),
     );
   }
 
-  // =========================================================
-  // ГЕНЕРАЦІЯ ЗВІТІВ (ОБ'ЄДНАНИЙ ЕПІКРИЗ ТА ОДИНИЧНА СЕСІЯ)
-  // =========================================================
-  void _showSingleSessionReport(Map<String, dynamic> p, Map<String, dynamic> sess) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text("Протокол огляду від ${sess['date']}"),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Пацієнт: ${p['name']}, ${p['age']} р.", style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text("Діагноз: ${p['mkch10Code']} - ${p['mkch10Name']}"),
-              const Divider(),
-              const Text("🎯 SMART Ціль:", style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(sess['smartGoal']),
-              const Divider(),
-              const Text("📊 Результати тестування:", style: TextStyle(fontWeight: FontWeight.bold)),
-              ...(sess['scalesData'] as List).map((s) => Text("• ${s['scaleName']}: ${s['score']} б. (${s['interpretation']})")),
-              const Divider(),
-              const Text("🏋️‍♂️ Комплекс вправ:", style: TextStyle(fontWeight: FontWeight.bold)),
-              ...(sess['assignedExercises'] as List).map((e) => Text("• $e")),
-            ],
-          ),
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Закрити"))],
-      ),
-    );
-  }
+  void _handleOptionSelected(int score) {
+    final s = _selectedScale!;
+    _bbsAnswers.add(score);
+    _accumulatedScore += score;
 
-  void _showComprehensiveClinicalReport(Map<String, dynamic> p) {
-    final List sessions = p['sessions'];
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("🏥 ОБ'ЄДНАНИЙ КЛІНІЧНИЙ ЕПІКРИЗ ФТ"),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("ПІБ Пацієнта: ${p['name']}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.teal)),
-              Text("Вік: ${p['age']} років", style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text("Основний діагноз (МКХ-10): ${p['mkch10Code']} ${p['mkch10Name']}"),
-              Text("Функціональні обмеження (МКФ): ${p['icfCodes'].join('; ')}"),
-              const Divider(height: 20, thickness: 2),
-              const Text("📈 ХРОНОЛОГІЯ РЕАБІЛІТАЦІЙНИХ СЕСІЙ:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
-              ...sessions.map((sess) {
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  color: Colors.grey.shade100,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("📅 Дата огляду: ${sess['date']}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                        const SizedBox(height: 4),
-                        Text("🎯 Ціль SMART: ${sess['smartGoal']}", style: const TextStyle(fontSize: 11)),
-                        const SizedBox(height: 4),
-                        const Text("📊 Тести та метрики:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                        ...(sess['scalesData'] as List).map((s) => Text("   - ${s['scaleName']}: ${s['score']} балів -> ${s['interpretation']}", style: const TextStyle(fontSize: 11))),
-                        const SizedBox(height: 4),
-                        const Text("🏋️‍♂️ Призначена програма:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                        ...(sess['assignedExercises'] as List).map((e) => Text("   • $e", style: const TextStyle(fontSize: 11))),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList()
-            ],
-          ),
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Готово"))],
-      ),
-    );
+    if (_currentQuestionIndex < s.questions.length - 1) {
+      setState(() { _currentQuestionIndex++; });
+    } else {
+      int finalCalculatedScore = s.id == "bbs" ? _bbsAnswers.reduce((a, b) => a + b) : _accumulatedScore;
+      
+      // Автоматична інтерпретація результату під час завершення тесту
+      String interpretation = "Стабільний стан за шкалою ${s.name} ($finalCalculatedScore балів)";
+      if (s.id == "bbs" && finalCalculatedScore < 21) interpretation = "Високий ризик падіння ($finalCalculatedScore балів)";
+      if (s.id == "ims" && finalCalculatedScore <= 3) interpretation = "Обмежена мобільність у ліжку";
+
+      setState(() {
+        if (_activeSession != null) {
+          final data = _activeSession!['scalesData'] as List;
+          data.removeWhere((element) => element['scaleId'] == s.id);
+          data.add({
+            "scaleId": s.id,
+            "scaleName": s.name,
+            "score": finalCalculatedScore,
+            "interpretation": interpretation
+          });
+        }
+        _currentScreen = "patient_card";
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.teal, content: Text("📊 Результат ${s.name}: $finalCalculatedScore балів додано до сесії!")));
+    }
   }
 }
