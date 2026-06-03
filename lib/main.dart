@@ -910,3 +910,93 @@ class _MainDashboardState extends State<MainDashboard> {
     }
   }
 }
+// =========================================================
+  // ОБ'ЄДНАНИЙ КЛІНІЧНИЙ ЕПІКРИЗ (ДЛЯ ДРУКУ ТА КОПІЮВАННЯ)
+  // =========================================================
+  void _showComprehensiveClinicalReport(Map<String, dynamic> p) {
+    final List sessions = p['sessions'];
+    String reportText = "=== ОБ'ЄДНАНИЙ РЕАБІЛІТАЦІЙНИЙ ЕПІКРИЗ ===\n";
+    reportText += "Пацієнт: ${p['name']}, ${p['age']} р.\n";
+    reportText += "Основний діагноз (МКХ-10): ${p['mkch10Code']} - ${p['mkch10Name']}\n";
+    reportText += "Функціональний профіль (МКФ): ${p['icfCodes'].join(', ')}\n";
+    reportText += "=========================================\n\n";
+
+    for (var sess in sessions) {
+      reportText += "📅 ДАТА ОГЛЯДУ: ${sess['date']}\n";
+      reportText += "🎯 Ціль SMART: ${sess['smartGoal']}\n";
+      
+      reportText += "📊 Результати шкал:\n";
+      final scales = sess['scalesData'] as List;
+      if (scales.isEmpty) {
+        reportText += "   - Шкали не проводились\n";
+      } else {
+        for (var sc in scales) {
+          reportText += "   * [${sc['scaleName']}] Бал: ${sc['score']} | Статус: ${sc['interpretation']}\n";
+        }
+      }
+
+      reportText += "🏋️‍♂️ Призначені вправи в ІРП:\n";
+      final exercises = sess['assignedExercises'] as List;
+      if (exercises.isEmpty) {
+        reportText += "   - Комплекс вправ не розписано\n";
+      } else {
+        for (var ex in exercises) {
+          reportText += "   - $ex\n";
+        }
+      }
+      reportText += "-----------------------------------------\n";
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("📋 Сформований медичний висновок"),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            reportText,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: reportText));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("📋 Епікриз скопійовано в буфер обміну!"))
+              );
+            },
+            child: const Text("Скопіювати текст"),
+          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Закрити")),
+        ],
+      ),
+    );
+  }
+
+  // =========================================================
+  // ЗВІТ ПО ОДНОМУ КОНКРЕТНОМУ ВІЗИТУ
+  // =========================================================
+  void _showSingleSessionReport(Map<String, dynamic> p, Map<String, dynamic> session) {
+    String reportText = "=== ВИТЯГ З КАРТКИ ВІЗИТУ ===\n";
+    reportText += "Пацієнт: ${p['name']}\nДата: ${session['date']}\n";
+    reportText += "МКХ-10: ${p['mkch10Code']}\n";
+    reportText += "SMART: ${session['smartGoal']}\n";
+    reportText += "Шкали: ${(session['scalesData'] as List).map((e) => "${e['scaleName']}: ${e['score']} б.").join(', ')}\n";
+    reportText += "Вправи: ${(session['assignedExercises'] as List).join(', ')}";
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("Звіт за ${session['date']}"),
+        content: SelectableText(reportText, style: const TextStyle(fontSize: 12)),
+        actions: [
+          TextButton(
+            onPressed: () => Clipboard.setData(ClipboardData(text: reportText)),
+            child: const Text("Копіювати"),
+          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Закрити")),
+        ],
+      ),
+    );
+  }
+} // КІНЕЦЬ КЛАСУ _MainDashboardState
