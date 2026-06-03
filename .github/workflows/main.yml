@@ -29,5 +29,12 @@ jobs:
           flutter create --platforms=android --project-name=amre_hab_app .
           flutter pub get
 
+      - name: Force Android SDK 34
+        run: |
+          if [ -f android/app/build.gradle ]; then
+            sed -i 's/compileSdk .*/compileSdk 34/g' android/app/build.gradle || true
+            sed -i 's/targetSdk .*/targetSdk 34/g' android/app/build.gradle || true
+          fi
+
       - name: Compile Application APK
         run: flutter build apk --release --no-tree-shake-icons
