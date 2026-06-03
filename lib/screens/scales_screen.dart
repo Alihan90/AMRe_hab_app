@@ -7,7 +7,7 @@ import 'scale_cpot_page.dart';
 import 'scale_ims_page.dart';
 import 'scale_mwt_page.dart';
 import 'scale_goniometry_page.dart';
-import 'scale_stroke_pages.dart';
+import 'scale_stroke_page.dart';
 
 class ScalesScreen extends StatelessWidget {
   final Patient? patient;
@@ -92,7 +92,7 @@ class ScalesScreen extends StatelessWidget {
       case 'ims': page = ScaleImsPage(patient: patient); break;
       case 'mwt': case 'borg': page = ScaleMwtPage(patient: patient); break;
       case 'goniometry': page = ScaleGoniometryPage(patient: patient); break;
-      case 'stroke': page = ScaleStrokePages(patient: patient); break;
+      case 'stroke': page = ScaleStrokePage(patient: patient); break;
       case 'berg': case 'rivermead': page = ScaleMwtPage(patient: patient); break;
       default: return;
     }
