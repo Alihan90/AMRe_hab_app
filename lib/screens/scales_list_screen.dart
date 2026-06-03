@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/clinical_data.dart';
 import '../models/scale_model.dart';
-import 'test_executor_screen.dart'; // Імпорт екрану тестування (Крок 4)
 
 class ScalesListScreen extends StatefulWidget {
   const ScalesListScreen({Key? key}) : super(key: key);
@@ -30,7 +29,7 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Клінічні шкали та тести'),
+        title: const Text('Оберіть шкалу для тестування'),
         backgroundColor: Colors.teal,
       ),
       body: ListView.builder(
@@ -47,7 +46,7 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
-              crossAxisAlignment: Cross CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Основна інформація картки
                 ListTile(
@@ -87,7 +86,7 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                   ),
                 ),
 
-                // Блок з інструкцією та описом, який розгортається по кліку на іконку "info"
+                // Блок з інструкцією та описом, який розгортається
                 if (isExpanded)
                   Container(
                     width: double.infinity,
@@ -127,7 +126,7 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                     ),
                   ),
 
-                // Кнопка для реального запуску тестування
+                // Кнопка, яка повертає вибрану шкалу назад у home_screen.dart
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 12.0, top: 4.0),
                   child: Row(
@@ -135,17 +134,12 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                     children: [
                       TextButton.icon(
                         onPressed: () {
-                          // Перехід на екран проведення конкретного тесту
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => TestExecutorScreen(scale: scale),
-                            ),
-                          );
+                          // Повертаємо об'єкт шкали назад у картку пацієнта
+                          Navigator.pop(context, scale);
                         },
                         icon: const Icon(Icons.play_arrow, color: Colors.teal),
                         label: const Text(
-                          'Почати тестування',
+                          'Обрати цю шкалу',
                           style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold),
                         ),
                       ),
