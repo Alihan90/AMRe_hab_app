@@ -3,12 +3,12 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: macos-latest # Потрібно для хмарної збірки під iOS та Android
+    runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v4 # Оновлено до v4
+
       - name: Set up Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4 # Оновлено до v4
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -26,15 +26,15 @@ jobs:
 
       # Збірка для Android (на виході отримаєш готовий APK)
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       # Збірка для iOS
       - name: Build iOS
         run: flutter build ios --no-codesign
 
-      # Завантаження готових файлів у вкладку Actions
+      # Завантаження готових файлів (Виправлено на актуальну v4)
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Rehab-App-Builds
           path: |
