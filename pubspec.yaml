@@ -1,22 +1,21 @@
-name: vit_rehab_app
-description: "A new Flutter project for ICU rehabilitation."
+name: amre_hab_app
+description: "A new Flutter project."
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '^3.0.0'
+  sdk: '>=3.4.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  share_plus: 4.1.0
-  pdf: ^3.10.7
-  path_provider: ^2.1.1
+  cupertino_icons: ^1.0.6
+  share_plus: ^7.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
