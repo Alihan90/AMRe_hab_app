@@ -31,22 +31,13 @@ jobs:
           flutter create --platforms=android --project-name=amre_hab_app .
           flutter pub get
 
-      - name: Force Android SDK 34 Core Config
+      - name: Force Global Android SDK 34 via Gradle Properties
         run: |
-          if [ -f android/app/build.gradle ]; then
-            # Виставляємо версії компіляції та таргету на 34
-            sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
-            sed -i 's/compileSdk .*/compileSdk 34/g' android/app/build.gradle || true
-            sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
-            sed -i 's/targetSdk .*/targetSdk 34/g' android/app/build.gradle || true
-            
-            # Підіймаємо мінімальну підтримувану версію до 23, щоб не конфліктували плагіни
-            sed -i 's/minSdkVersion .*/minSdkVersion 23/g' android/app/build.gradle || true
-            sed -i 's/minSdk .*/minSdk 23/g' android/app/build.gradle || true
-            
-            sed -i 's/flutter.compileSdkVersion.*/34/g' android/local.properties || true
-            sed -i 's/flutter.targetSdkVersion.*/34/g' android/local.properties || true
-          fi
+          mkdir -p android
+          # Прописуємо глобальні змінні для Gradle, які перевизначать налаштування всіх плагінів (зокрема share_plus)
+          echo "flutter.compileSdkVersion=34" >> android/local.properties
+          echo "flutter.targetSdkVersion=34" >> android/local.properties
+          echo "flutter.minSdkVersion=23" >> android/local.properties
 
       - name: Build APK Release
         run: flutter build apk --release --no-tree-shake-icons
