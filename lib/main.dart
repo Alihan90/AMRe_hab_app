@@ -11,12 +11,20 @@ class RehabApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Клінічний Комплекс ФТ',
-      debugShowCheckedModeBanner: false,
+      title: 'PT Rehab App',
+      // Додаємо локалі
+      supportedLocales: const [
+        Locale('uk', 'UA'), // Українська
+        Locale('en', 'US'), // Англійська
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      locale: const Locale('uk', 'UA'), // Встановлюємо українську за замовчуванням
       theme: ThemeData(
-        primarySwatch: Colors.teal,
-        scaffoldBackgroundColor: Colors.grey.shade50,
-        cardTheme: const CardTheme(elevation: 3, margin: EdgeInsets.symmetric(vertical: 6, horizontal: 4)),
+        primarySwatch: Colors.blue,
       ),
       home: const MainDashboard(),
     );
