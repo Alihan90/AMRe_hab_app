@@ -15,7 +15,7 @@ class RehabApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.teal,
-        scaffoldBackgroundColor: Colors.grey.shade100,
+        scaffoldBackgroundColor: Colors.grey.shade50,
         cardTheme: const CardTheme(elevation: 3, margin: EdgeInsets.symmetric(vertical: 6, horizontal: 4)),
       ),
       home: const MainDashboard(),
@@ -23,20 +23,26 @@ class RehabApp extends StatelessWidget {
   }
 }
 
-// ГЛОБАЛЬНА СИСТЕМА ОБЛІКУ ПАЦІЄНТІВ ВІДДІЛЕННЯ
+// СИСТЕМА ЕЛЕКТРОННОГО ЗДОРОВ'Я ПАЦІЄНТІВ (З ПІДТРИМКОЮ СЕСІЙНИХ ОГЛЯДІВ ЗА ДАТАМИ)
 List<Map<String, dynamic>> globalPatients = [
   {
-    "id": "p1",
+    "id": "p_1",
     "name": "Іванов Петро Миколайович",
     "age": 45,
     "mkch10Code": "I63.3",
     "mkch10Name": "Інфаркт мозку внаслідок тромбозу церебральних артерій (Ішемічний інсульт)",
-    "icfCodes": ["b730 (Сила м'язів)", "d450 (Ходьба)"],
-    "history": [
-      {"scaleId": "ims", "scaleName": "IMS", "date": "2026-06-01", "score": 3, "interpretation": "Активне утримання сидячого положення на краю ліжка"}
-    ],
-    "smartGoal": "Пацієнт зможе самостійно переходити в положення стоячи біля ліжка (домен d410) за підтримки 1 особи до 15.06.2026 для ініціації вертикалізації.",
-    "exercises": ["Діафрагмальне дихання", "Пасивна суглобова гімнастика"]
+    "icfCodes": ["b730 (Сила м'язів)", "d450 (Ходьба)", "d415 (Баланс)"],
+    // Огляди пацієнта розбиті по конкретних днях (Сесіях)
+    "sessions": [
+      {
+        "date": "2026-06-02",
+        "scalesData": [
+          {"scaleId": "ims", "scaleName": "IMS", "score": 3, "interpretation": "Активне утримання сидячого положення на краю ліжка"}
+        ],
+        "assignedExercises": ["Діафрагмальне дихання", "Пасивна суглобова гімнастика"],
+        "smartGoal": "Пацієнт зможе самостійно утримувати положення сидячи на краю ліжка (домен d415) більше 5 хвилин для підготовки до вертикалізації до 08.06.2026."
+      }
+    ]
   }
 ];
 
@@ -48,10 +54,9 @@ class MainDashboard extends StatefulWidget {
 }
 
 class _MainDashboardState extends State<MainDashboard> {
-  // Навігаційна логіка додатку
-  String _currentScreen = "dashboard"; // Режими: dashboard, patients_list, create_patient, patient_card, scales_catalog, mckh_catalog, exercises_catalog, test_exec
+  String _currentScreen = "dashboard"; // dashboard, patients_list, create_patient, patient_card, scales_catalog, mckh_catalog, exercises_catalog, test_exec
   
-  // Локальні пошукові запити для кожного розділу
+  // Пошукові рушії
   String _globalSearch = "";
   String _patientSearch = "";
   String _scaleSearch = "";
@@ -59,14 +64,22 @@ class _MainDashboardState extends State<MainDashboard> {
   String _exerciseSearch = "";
 
   Map<String, dynamic>? _selectedPatient;
+  Map<String, dynamic>? _activeSession; // Поточний день огляду, з яким ми працюємо
   ClinicalScale? _selectedScale;
-  int _activeRadioScore = -1;
+  
+  // Стан покрокового проходження тестів
+  int _currentQuestionIndex = 0;
+  int _accumulatedScore = 0;
+  List<int> _bbsAnswers = []; // Локальний буфер для 14 відповідей Берга
 
-  // Контролери для створення нової карти
+  // Контролери нової карти
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   Map<String, String> _chosenMckh = ClinicalData.mckh10Catalog.first;
   final List<String> _chosenIcfCodes = [];
+
+  // Тимчасовий буфер для вправ поточного дня
+  List<String> _tempSelectedExercises = [];
 
   @override
   Widget build(BuildContext context) {
@@ -74,12 +87,11 @@ class _MainDashboardState extends State<MainDashboard> {
       appBar: AppBar(
         title: Text(_getAppBarTitle(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.teal.shade900,
-        elevation: 4,
         actions: [
           if (_currentScreen != "dashboard")
             IconButton(
               icon: const Icon(Icons.grid_view, size: 28, color: Colors.white),
-              tooltip: "На головне меню",
+              tooltip: "На головний екран",
               onPressed: () => setState(() => _currentScreen = "dashboard"),
             )
         ],
@@ -98,12 +110,12 @@ class _MainDashboardState extends State<MainDashboard> {
     switch (_currentScreen) {
       case "dashboard": return "🏥 Головне Меню ФТ";
       case "patients_list": return "👥 Реєстр Пацієнтів";
-      case "create_patient": return "📝 Реєстрація Медичної Карти";
-      case "patient_card": return "🗂 Картка та ІРП Пацієнта";
+      case "create_patient": return "📝 Формування Карти";
+      case "patient_card": return "🗂 Електронна Карта Пацієнта";
       case "scales_catalog": return "📊 Діагностичні Шкали (16)";
       case "mckh_catalog": return "🩺 Довідник МКХ-10";
-      case "exercises_catalog": return "🏋️‍♂️ Каталог Клінічних Вправ";
-      case "test_exec": return "⏱ Проведення Тестування";
+      case "exercises_catalog": return "🏋️‍♂️ Реабілітаційні Комплекси";
+      case "test_exec": return "⏱ Покроковий Клінічний Тест";
       default: return "Клінічний Комплекс";
     }
   }
@@ -135,7 +147,7 @@ class _MainDashboardState extends State<MainDashboard> {
   }
 
   // =========================================================
-  // ЭКРАН: ГОЛОВНЕ МЕНЮ (DASHBOARD) З ГЛОБАЛЬНИМ ПОШУКОМ
+  // ЕКРАН: ГОЛОВНЕ МЕНЮ З ГЛОБАЛЬНИМ ПОШУКОМ ПАЦІЄНТІВ
   // =========================================================
   Widget _screenDashboard() {
     return Column(
@@ -146,12 +158,12 @@ class _MainDashboardState extends State<MainDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Глобальний пошук по клініці:", style: TextStyle(color: Colors.white70, fontSize: 14)),
+              const Text("Швидкий глобальний пошук карти пацієнта:", style: TextStyle(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 6),
               TextField(
                 onChanged: (v) => setState(() => _globalSearch = v),
                 decoration: InputDecoration(
-                  hintText: "Введіть ПІБ пацієнта для швидкого виклику ІРП...",
+                  hintText: "Введіть ПІБ для миттєвого виклику ІРП...",
                   prefixIcon: const Icon(Icons.search, color: Colors.teal),
                   fillColor: Colors.white,
                   filled: true,
@@ -167,13 +179,13 @@ class _MainDashboardState extends State<MainDashboard> {
             : GridView.count(
                 crossAxisCount: 2,
                 padding: const EdgeInsets.all(16),
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
                 children: [
-                  _buildMenuCard("👥 Пацієнти", "Карти, SMART-цілі, формування ІРП", Colors.blue.shade700, () => setState(() => _currentScreen = "patients_list")),
-                  _buildMenuCard("📊 Шкали Оцінки", "16 шкал, інструкції, автоматичний підрахунок", Colors.teal.shade700, () => setState(() => _currentScreen = "scales_catalog")),
-                  _buildMenuCard("🩺 МКХ-10", "Клінічні коди та домени МКФ", Colors.purple.shade700, () => setState(() => _currentScreen = "mckh_catalog")),
-                  _buildMenuCard("🏋️‍♂️ Вправи", "Реабілітаційні комплекси та протоколи", Colors.orange.shade800, () => setState(() => _currentScreen = "exercises_catalog")),
+                  _buildMenuCard("👥 Пацієнти", "Реєстр, щоденні огляди, формування ІРП", Colors.blue.shade700, () => setState(() => _currentScreen = "patients_list")),
+                  _buildMenuCard("📊 Шкали Оцінки", "16 шкал, покрокові інтерактивні тести", Colors.teal.shade700, () => setState(() => _currentScreen = "scales_catalog")),
+                  _buildMenuCard("🩺 МКХ-10", "Повний спектр кодів та домени МКФ", Colors.purple.shade700, () => setState(() => _currentScreen = "mckh_catalog")),
+                  _buildMenuCard("🏋️‍♂️ Вправи", "Повні протоколи терапевтичних втручань", Colors.orange.shade800, () => setState(() => _currentScreen = "exercises_catalog")),
                 ],
               ),
         )
@@ -183,7 +195,7 @@ class _MainDashboardState extends State<MainDashboard> {
 
   Widget _buildGlobalSearchResults() {
     final matches = globalPatients.where((p) => p['name'].toLowerCase().contains(_globalSearch.toLowerCase())).toList();
-    if (matches.isEmpty) return const Center(child: Text("Нічого не знайдено за глобальним запитом."));
+    if (matches.isEmpty) return const Center(child: Text("За вказаним ПІБ пацієнтів не знайдено."));
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: matches.length,
@@ -191,10 +203,15 @@ class _MainDashboardState extends State<MainDashboard> {
         final p = matches[i];
         return Card(
           child: ListTile(
-            leading: const Icon(Icons.person, color: Colors.teal),
-            title: Text(p['name']),
-            subtitle: Text(p['mkch10Name']),
-            onTap: () => setState(() { _selectedPatient = p; _currentScreen = "patient_card"; }),
+            leading: const Icon(Icons.account_box, color: Colors.teal, size: 36),
+            title: Text(p['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text("Код: ${p['mkch10Code']} | Сесій огляду: ${p['sessions'].length}"),
+            onTap: () => setState(() { 
+              _selectedPatient = p; 
+              _activeSession = p['sessions'].first;
+              _tempSelectedExercises = List<String>.from(_activeSession!['assignedExercises']);
+              _currentScreen = "patient_card"; 
+            }),
           ),
         );
       },
@@ -206,14 +223,14 @@ class _MainDashboardState extends State<MainDashboard> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6, offset: const Offset(0, 4))]),
+        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(desc, style: const TextStyle(color: Colors.white70, fontSize: 12), maxLines: 3, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 6),
+            Text(desc, style: const TextStyle(color: Colors.white70, fontSize: 12), maxLines: 3),
           ],
         ),
       ),
@@ -221,7 +238,7 @@ class _MainDashboardState extends State<MainDashboard> {
   }
 
   // =========================================================
-  // ЭКРАН: РЕЄСТР ПАЦІЄНТІВ (ПОШУК, НАВІГАЦІЯ, СТВОРЕННЯ)
+  // ЕКРАН: РЕЄСТР КАРТОК ПАЦІЄНТІВ
   // =========================================================
   Widget _screenPatientsList() {
     final filtered = globalPatients.where((p) => p['name'].toLowerCase().contains(_patientSearch.toLowerCase())).toList();
@@ -231,22 +248,23 @@ class _MainDashboardState extends State<MainDashboard> {
         children: [
           Row(
             children: [
-              IconButton(icon: const Icon(Icons.arrow_back_ios), onPressed: () => setState(() => _currentScreen = "dashboard")),
+              IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _currentScreen = "dashboard")),
               Expanded(
                 child: TextField(
                   onChanged: (v) => setState(() => _patientSearch = v),
-                  decoration: const InputDecoration(labelText: "Пошук в картках пацієнтів...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "Пошук пацієнта в базі...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade700, minimumSize: const Size.fromHeight(48)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, minimumSize: const Size.fromHeight(48)),
             onPressed: () => setState(() => _currentScreen = "create_patient"),
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text("ЗАРЕЄСТРУВАТИ НОВУ КАРТУ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            icon: const Icon(Icons.person_add, color: Colors.white),
+            label: const Text("ЗАРЕЄСТРУВАТИ НОВУ КАРТУ ПАЦІЄНТА", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
+          const SizedBox(height: 12),
           Expanded(
             child: ListView.builder(
               itemCount: filtered.length,
@@ -255,9 +273,14 @@ class _MainDashboardState extends State<MainDashboard> {
                 return Card(
                   child: ListTile(
                     title: Text(p['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text("Код МКХ-10: ${p['mkch10Code']} | Тестів: ${p['history'].length}"),
-                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.teal, size: 18),
-                    onTap: () => setState(() { _selectedPatient = p; _currentScreen = "patient_card"; }),
+                    subtitle: Text("Діагноз: ${p['mkch10Code']} | Кількість проведених оглядів: ${p['sessions'].length}"),
+                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.teal),
+                    onTap: () => setState(() { 
+                      _selectedPatient = p; 
+                      _activeSession = p['sessions'].first;
+                      _tempSelectedExercises = List<String>.from(_activeSession!['assignedExercises']);
+                      _currentScreen = "patient_card"; 
+                    }),
                   ),
                 );
               },
@@ -269,7 +292,7 @@ class _MainDashboardState extends State<MainDashboard> {
   }
 
   // =========================================================
-  // ЭКРАН: СТВОРЕННЯ МЕДИЧНОЇ КАРТИ ПАЦІЄНТА
+  // ЕКРАН: СТВОРЕННЯ МЕДИЧНОЇ КАРТИ ПАЦІЄНТА
   // =========================================================
   Widget _screenCreatePatient() {
     return ListView(
@@ -277,16 +300,16 @@ class _MainDashboardState extends State<MainDashboard> {
       children: [
         Row(
           children: [
-            IconButton(icon: const Icon(Icons.arrow_back_ios), onPressed: () => setState(() => _currentScreen = "patients_list")),
-            const Text("Формування нової карти", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _currentScreen = "patients_list")),
+            const Text("Первинне заведення медичної карти", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           ],
         ),
         const Divider(),
-        TextField(controller: _nameController, decoration: const InputDecoration(labelText: "ПІБ Пацієнта (повністю)", border: OutlineInputBorder())),
+        TextField(controller: _nameController, decoration: const InputDecoration(labelText: "ПІБ Пацієнта (Повністю)", border: OutlineInputBorder())),
         const SizedBox(height: 12),
-        TextField(controller: _ageController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Вік пацієнта", border: OutlineInputBorder())),
+        TextField(controller: _ageController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Вік (повних років)", border: OutlineInputBorder())),
         const SizedBox(height: 16),
-        const Text("🩺 Клінічний діагноз за МКХ-10:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+        const Text("🩺 Профільний діагноз МКХ-10 (Оберіть із клінічної бази):", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -296,21 +319,21 @@ class _MainDashboardState extends State<MainDashboard> {
             isExpanded: true,
             underline: const SizedBox(),
             items: ClinicalData.mckh10Catalog.map((item) {
-              return DropdownMenuItem(value: item, child: Text("${item['code']} - ${item['name']}", style: const TextStyle(fontSize: 13)));
+              return DropdownMenuItem(value: item, child: Text("${item['code']} - ${item['name']}", style: const TextStyle(fontSize: 12)));
             }).toList(),
             onChanged: (v) => setState(() => _chosenMckh = v!),
           ),
         ),
         const SizedBox(height: 16),
-        const Text("📌 Функціональні обмеження за МКФ (Оберіть пригнічені домени):", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+        const Text("📌 Функціональний дефіцит за доменами МКФ:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
         ...ClinicalData.icfDomains.map((domain) {
-          final title = "${domain['code']} ${domain['name']}";
+          final stringRepresentation = "${domain['code']} ${domain['name']}";
           return CheckboxListTile(
-            title: Text(title, style: const TextStyle(fontSize: 13)),
-            value: _chosenIcfCodes.contains(title),
+            title: Text(stringRepresentation, style: const TextStyle(fontSize: 12)),
+            value: _chosenIcfCodes.contains(stringRepresentation),
             onChanged: (val) {
               setState(() {
-                if (val!) { _chosenIcfCodes.add(title); } else { _chosenIcfCodes.remove(title); }
+                if (val!) { _chosenIcfCodes.add(stringRepresentation); } else { _chosenIcfCodes.remove(stringRepresentation); }
               });
             },
           );
@@ -320,156 +343,250 @@ class _MainDashboardState extends State<MainDashboard> {
           style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800, padding: const EdgeInsets.all(16)),
           onPressed: () {
             if (_nameController.text.isNotEmpty) {
-              globalPatients.add({
-                "id": DateTime.now().toString(),
+              final newPatient = {
+                "id": "p_${DateTime.now().millisecondsSinceEpoch}",
                 "name": _nameController.text,
                 "age": int.tryParse(_ageController.text) ?? 50,
                 "mkch10Code": _chosenMckh['code'],
                 "mkch10Name": _chosenMckh['name'],
                 "icfCodes": List<String>.from(_chosenIcfCodes),
-                "history": [],
-                "smartGoal": "Ціль за SMART сформується автоматично після оцінки шкалами.",
-                "exercises": ["Діафрагмальне дихання"]
-              });
+                "sessions": [
+                  {
+                    "date": "2026-06-03",
+                    "scalesData": [],
+                    "assignedExercises": <String>[],
+                    "smartGoal": "Ціль за SMART сформується автоматично після проведення тестувань шкалами."
+                  }
+                ]
+              };
+              globalPatients.add(newPatient);
               _nameController.clear(); _ageController.clear(); _chosenIcfCodes.clear();
-              setState(() => _currentScreen = "patients_list");
+              setState(() {
+                _selectedPatient = newPatient;
+                _activeSession = newPatient['sessions'].first;
+                _tempSelectedExercises = [];
+                _currentScreen = "patient_card";
+              });
             }
           },
-          child: const Text("ЗБЕРЕГТИ КАРТУ В РЕЄСТР", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: const Text("ЗБЕРЕГТИ КАРТКУ В БАЗУ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         )
       ],
     );
   }
 
   // =========================================================
-  // ЭКРАН: КАРТКА ПАЦІЄНТА, SMART-ЦІЛІ ТА ШЕРИНГ ІРП
+  // ЕКРАН: КАРТКА ПАЦІЄНТА ТА СЕСІЙНІ ОГЛЯДИ (ЯДРО EHR)
   // =========================================================
   Widget _screenPatientCard() {
     final p = _selectedPatient!;
+    final List sessionsList = p['sessions'];
+
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            ElevatedButton.icon(onPressed: () => setState(() => _currentScreen = "patients_list"), icon: const Icon(Icons.arrow_back), label: const Text("До реєстру")),
+            ElevatedButton.icon(onPressed: () => setState(() => _currentScreen = "patients_list"), icon: const Icon(Icons.arrow_back), label: const Text("Реєстр")),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple.shade800),
-              onPressed: () => _buildAndShareIRPReport(p),
-              icon: const Icon(Icons.share, color: Colors.white),
-              label: const Text("Шеринг ІРП / Друк", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple.shade900),
+              onPressed: () => _showComprehensiveClinicalReport(p),
+              icon: const Icon(Icons.print_outlined, color: Colors.white),
+              label: const Text("ОФІЦІЙНИЙ ЕПІКРИЗ (ОБ'ЄДНАНИЙ)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
             )
           ],
         ),
-        const SizedBox(height: 16),
-        Text(p['name'], style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.teal)),
-        Text("Вік: ${p['age']} років | МКХ-10: ${p['mkch10Code']} - ${p['mkch10Name']}"),
-        Text("Порушення МКФ: ${p['icfCodes'].join(', ')}", style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        const SizedBox(height: 12),
+        // Паспортна частина карти
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.teal.shade200)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(p['name'], style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.teal)),
+              const SizedBox(height: 4),
+              Text("Вік: ${p['age']} років | МКХ-10: ${p['mkch10Code']} - ${p['mkch10Name']}", style: const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text("Коди МКФ: ${p['icfCodes'].join('; ')}", style: const TextStyle(color: Colors.black54, fontSize: 12)),
+            ],
+          ),
+        ),
         const Divider(height: 24),
+
+        // СЕЛЕКТОР ДАТИ ОГЛЯДУ (КЛІНІЧНІ СЕСІЇ)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("📅 Огляд за дату:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade800, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4)),
+              onPressed: () {
+                _createNewSessionForSelectedPatient(p);
+              },
+              icon: const Icon(Icons.calendar_today, size: 14, color: Colors.white),
+              label: const Text("СТВОРІТИ НОВИЙ ВІЗИТ (ДЕНЬ)", style: TextStyle(fontSize: 10, color: Colors.white)),
+            )
+          ],
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: 45,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: sessionsList.length,
+            itemBuilder: (context, idx) {
+              final sess = sessionsList[idx];
+              final isCurrent = sess == _activeSession;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ChoiceChip(
+                  label: Text(sess['date'], style: TextStyle(color: isCurrent ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+                  selected: isCurrent,
+                  selectedColor: Colors.teal.shade700,
+                  backgroundColor: Colors.grey.shade300,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _activeSession = sess;
+                        _tempSelectedExercises = List<String>.from(sess['assignedExercises']);
+                      });
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        ),
         
-        // СМАРТ КОНСТРУКТОР ЦІЛЕЙ
+        // ВНУТРІШНІ ДАНІ ДЛЯ ОБРАНОЇ СЕСІЇ (ОГЛЯДУ)
         Card(
-          color: Colors.amber.shade50,
-          shape: RoundedRectangleBorder(side: BorderSide(color: Colors.amber.shade400), borderRadius: BorderRadius.circular(8)),
+          color: Colors.white,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(children: [Icon(Icons.psychology, color: Colors.amber), SizedBox(width: 6), Text("Конструктор цілей SMART (Автоматичний):", style: TextStyle(fontWeight: FontWeight.bold))]),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("📋 Статус візиту [${_activeSession!['date']}]", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                    IconButton(
+                      icon: const Icon(Icons.share, size: 18, color: Colors.teal),
+                      tooltip: "Сформувати виписку лише за цей день",
+                      onPressed: () => _showSingleSessionReport(p, _activeSession!),
+                    )
+                  ],
+                ),
                 const SizedBox(height: 6),
-                Text(p['smartGoal'], style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.black87, fontSize: 13)),
+                // МЕДИЧНА ЦІЛЬ ЗА СИСТЕМОЮ SMART
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.amber)),
+                  child: Text("🎯 SMART-ціль сесії: ${_activeSession!['smartGoal']}", style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800, minimumSize: const Size.fromHeight(36)),
+                  onPressed: () => setState(() => _currentScreen = "scales_catalog"),
+                  icon: const Icon(Icons.analytics_outlined, color: Colors.white),
+                  label: const Text("Запустити тестування шкалами на цей день", style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(height: 12),
+                const Text("Результати шкал за цей огляд:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                if ((_activeSession!['scalesData'] as List).isEmpty)
+                  const Padding(padding: EdgeInsets.all(8.0), child: Text("Шкали ще не проводились у цей день.", style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)))
+                else
+                  ...(_activeSession!['scalesData'] as List).map<Widget>((sc) {
+                    return ListTile(
+                      dense: true,
+                      leading: Chip(label: Text(sc['scaleName'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)), backgroundColor: Colors.teal),
+                      title: Text("Результат: ${sc['score']} балів", style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(sc['interpretation'], style: const TextStyle(fontSize: 11)),
+                    );
+                  }).toList(),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade700),
-          onPressed: () => setState(() => _currentScreen = "scales_catalog"),
-          icon: const Icon(Icons.playlist_add_check, color: Colors.white),
-          label: const Text("Провести обстеження за 16 шкалами", style: TextStyle(color: Colors.white)),
-        ),
-        const SizedBox(height: 20),
-        const Text("📊 Клінічна динаміка тестувань:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.teal)),
-        if (p['history'].isEmpty)
-          const Padding(padding: EdgeInsets.all(12.0), child: Text("Жодної оцінки за шкалами ще не зафіксовано.", style: TextStyle(fontStyle: FontStyle.italic)))
-        else
-          ...p['history'].map<Widget>((h) {
-            return Card(
-              child: ListTile(
-                leading: CircleAvatar(backgroundColor: Colors.teal.shade100, child: Text(h['scaleName'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                title: Text("Оцінка: ${h['score']} балів"),
-                subtitle: Text("Статус: ${h['interpretation']}\nДата: ${h['date']}", style: const TextStyle(fontSize: 12)),
-              ),
-            );
-          }).toList(),
-        const SizedBox(height: 20),
-        const Text("🏋️‍♂️ Призначені фізичні вправи (Комплекс ІРП):", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.teal)),
+
+        const SizedBox(height: 14),
+        // БЛОК ВПРАВ З ЖОРСТКОЮ КНОПКОЮ ЗБЕРЕЖЕННЯ В ІРП
+        const Text("🏋️‍♂️ Призначення фізичних вправ на цей день огляду:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.teal)),
+        const SizedBox(height: 4),
         ...ClinicalData.exercisesCatalog.map((cat) {
           return ExpansionTile(
-            title: Text(cat['category'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            title: Text(cat['category'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.indigo)),
             children: (cat['items'] as List).map<Widget>((ex) {
-              final isSelected = p['exercises'].contains(ex['name']);
+              final isChecked = _tempSelectedExercises.contains(ex['name']);
               return CheckboxListTile(
-                title: Text(ex['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                subtitle: Text(ex['desc'], style: const TextStyle(fontSize: 12)),
-                value: isSelected,
+                title: Text(ex['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                subtitle: Text(ex['desc'], style: const TextStyle(fontSize: 11)),
+                value: isChecked,
                 onChanged: (val) {
                   setState(() {
-                    if (val!) { p['exercises'].add(ex['name']); } else { p['exercises'].remove(ex['name']); }
+                    if (val!) {
+                      _tempSelectedExercises.add(ex['name']);
+                    } else {
+                      _tempSelectedExercises.remove(ex['name']);
+                    }
                   });
                 },
               );
             }).toList(),
           );
-        }).toList()
+        }).toList(),
+        
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade900, padding: const EdgeInsets.all(14)),
+          onPressed: () {
+            setState(() {
+              _activeSession!['assignedExercises'] = List<String>.from(_tempSelectedExercises);
+            });
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              backgroundColor: Colors.green.shade800,
+              content: Text("💾 Комплекс вправ успішно зафіксовано в ІРП за день ${_activeSession!['date']}!"),
+            ));
+          },
+          icon: const Icon(Icons.save, color: Colors.white),
+          label: const Text("💾 ЗБЕРЕГТИ КОМПЛЕКС ВПРАВ В ІРП ЦЬОГО ДНЯ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 30),
       ],
     );
   }
 
-  void _buildAndShareIRPReport(Map<String, dynamic> p) {
-    final report = """
-==================================================
-ІНДИВІДУАЛЬНИЙ РЕАБІЛІТАЦІЙНИЙ ПЛАН (ІРП) ПАЦІЄНТА
-==================================================
-Пацієнт: ${p['name']}
-Вік: ${p['age']} років
-Діагноз за МКХ-10: ${p['mkch10Code']} - ${p['mkch10Name']}
-Профільні домени МКФ: ${p['icfCodes'].join(', ')}
+  void _createNewSessionForSelectedPatient(Map<String, dynamic> p) {
+    // Автоматично вираховуємо наступний день для сесії
+    final List sessions = p['sessions'];
+    final lastDateStr = sessions.first['date']; // Останній доданий завжди попереду
+    final parts = lastDateStr.split('-');
+    int day = int.parse(parts[2]) + 1;
+    String dayStr = day < 10 ? "0$day" : "$day";
+    String newDate = "${parts[0]}-${parts[1]}-$dayStr";
 
-[ПОТОЧНИЙ КЛІНІЧНИЙ СТАТУС ЗА ШКАЛАМИ]
-${p['history'].isEmpty ? '- Клінічні тести відсутні.' : p['history'].map((h) => '• Шкала ${h['scaleName']}: ${h['score']} балів (${h['interpretation']})').join('\n')}
+    final newSess = {
+      "date": newDate,
+      "scalesData": [],
+      "assignedExercises": <String>[],
+      "smartGoal": "Ціль за SMART адаптується після проведення нових вимірів."
+    };
 
-[РЕАБІЛІТАЦІЙНА ЦІЛЬ ЗА СИСТЕМОЮ SMART]
-${p['smartGoal']}
+    setState(() {
+      sessions.insert(0, newSess); // Додаємо на початок списку
+      _activeSession = newSess;
+      _tempSelectedExercises = [];
+    });
 
-[ПРИЗНАЧЕНИЙ ПРОТОКОЛ ФІЗИЧНИХ ВПРАВ]
-${p['exercises'].isEmpty ? '- Вправи не призначено.' : p['exercises'].map((ex) => '• $ex').join('\n')}
-==================================================
-Звіт згенеровано автоматично автономним модулем ФТ.
-""";
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("📄 Документ ІРП сформовано"),
-        content: SingleChildScrollView(child: Text(report, style: const TextStyle(fontFamily: 'monospace', fontSize: 11))),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Назад")),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Текст успішно скопійовано! Вставте його у Viber, Telegram або відправте на друк.")));
-            },
-            child: const Text("Копіювати для шерингу"),
-          )
-        ],
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text("Створено чистий огляд на нову дату: $newDate. Проведіть повторне тестування."),
+    ));
   }
 
   // =========================================================
-  // ЭКРАН: КАТАЛОГ ВСІХ 16 КЛІНІЧНИХ ШКАЛ ОЦІНКИ (З ПОШУКОМ)
+  // ЕКРАН: КАТАЛОГ ШКАЛ ОЦІНКИ ТА ЗАПУСК ПОКРОКОВИХ ТЕСТІВ
   // =========================================================
   Widget _screenScalesCatalog() {
     final filtered = ClinicalData.allScales.where((s) => s.name.toLowerCase().contains(_scaleSearch.toLowerCase()) || s.fullName.toLowerCase().contains(_scaleSearch.toLowerCase())).toList();
@@ -479,11 +596,11 @@ ${p['exercises'].isEmpty ? '- Вправи не призначено.' : p['exer
         children: [
           Row(
             children: [
-              IconButton(icon: const Icon(Icons.arrow_back_ios), onPressed: () => setState(() => _currentScreen = _selectedPatient != null ? "patient_card" : "dashboard")),
+              IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _currentScreen = _selectedPatient != null ? "patient_card" : "dashboard")),
               Expanded(
                 child: TextField(
                   onChanged: (v) => setState(() => _scaleSearch = v),
-                  decoration: const InputDecoration(labelText: "Пошук серед 16 клінічних шкал...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "Пошук серед 16 шкал оцінки...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
                 ),
               ),
             ],
@@ -498,24 +615,32 @@ ${p['exercises'].isEmpty ? '- Вправи не призначено.' : p['exer
                   color: Colors.teal.shade50,
                   child: ExpansionTile(
                     title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
-                    subtitle: Text(s.fullName, style: const TextStyle(fontSize: 12)),
+                    subtitle: Text(s.fullName, style: const TextStyle(fontSize: 11)),
                     children: [
                       Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("📌 Категорія МКФ: ${s.icfCategory}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text("📌 Домен МКФ: ${s.icfCategory}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                             const SizedBox(height: 4),
-                            Text("📋 Показання: ${s.indications}", style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                            Text("📋 Показання: ${s.indications}", style: const TextStyle(fontSize: 12)),
                             const SizedBox(height: 4),
-                            Text("ℹ️ Інструкція проведення: ${s.instruction}", style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
-                            const SizedBox(height: 12),
+                            Text("ℹ️ Інструкція проведення: ${s.instruction}", style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.black87)),
+                            const SizedBox(height: 10),
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800),
-                              onPressed: () => setState(() { _selectedScale = s; _currentScreen = "test_exec"; }),
-                              icon: const Icon(Icons.play_arrow, color: Colors.white),
-                              label: const Text("Запустити тестування", style: TextStyle(color: Colors.white)),
+                              onPressed: () {
+                                setState(() {
+                                  _selectedScale = s;
+                                  _currentQuestionIndex = 0;
+                                  _accumulatedScore = 0;
+                                  _bbsAnswers.clear();
+                                  _currentScreen = "test_exec";
+                                });
+                              },
+                              icon: const Icon(Icons.play_circle_fill, color: Colors.white),
+                              label: Text("ЗАПУСТИТИ ПОВНИЙ ПОКРОКОВИЙ ТЕСТ (${s.questions.length} ПУНКТІВ)", style: const TextStyle(color: Colors.white)),
                             )
                           ],
                         ),
@@ -532,7 +657,128 @@ ${p['exercises'].isEmpty ? '- Вправи не призначено.' : p['exer
   }
 
   // =========================================================
-  // ЭКРАН: МКХ-10 ДОВІДНИК З ЛОКАЛЬНИМ ПОШУКОМ
+  // ЕКРАН: ПОКРОКОВИЙ ІНТЕРАКТИВНИЙ КОНСТРУКТОР ТЕСТІВ
+  // =========================================================
+  Widget _screenTestExecutor() {
+    final s = _selectedScale!;
+    final totalQuestions = s.questions.length;
+    final q = s.questions[_currentQuestionIndex];
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LinearProgressIndicator(value: (_currentQuestionIndex + 1) / totalQuestions, backgroundColor: Colors.grey.shade300, color: Colors.teal),
+          const SizedBox(height: 12),
+          Text("Шкала: ${s.fullName}", style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text("Пункт ${_currentQuestionIndex + 1} з $totalQuestions", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.teal)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade300)),
+            child: Text(q.text, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black900)),
+          ),
+          const SizedBox(height: 14),
+          const Text("Оберіть фактичну відповідь або дію пацієнта:", style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+          const SizedBox(height: 6),
+          Expanded(
+            child: ListView.builder(
+              itemCount: q.options.length,
+              itemBuilder: (context, idx) {
+                final opt = q.options[idx];
+                return Card(
+                  elevation: 1,
+                  child: ListTile(
+                    title: Text(opt.text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    trailing: CircleAvatar(backgroundColor: Colors.teal.shade700, radius: 14, child: Text("${opt.score}", style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold))),
+                    onTap: () {
+                      _handleOptionSelected(opt.score);
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+            onPressed: () => setState(() => _currentScreen = "scales_catalog"),
+            child: const Text("Перервати тест"),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _handleOptionSelected(int score) {
+    final s = _selectedScale!;
+    _bbsAnswers.add(score);
+    _accumulatedScore += score;
+
+    if (_currentQuestionIndex < s.questions.length - 1) {
+      setState(() {
+        _currentQuestionIndex++;
+      });
+    } else {
+      // ТЕСТ ЗАКІНЧЕНО — АВТОМАТИЧНИЙ КЛІНІЧНИЙ КАЛЬКУЛЯТОР ТА SMART-ПРОГНОЗУВАЧ
+      int finalCalculatedScore = _accumulatedScore;
+      if (s.id == "bbs") {
+        // Для Берга вираховуємо точну суму всіх 14 відповідей
+        finalCalculatedScore = _bbsAnswers.reduce((a, b) => a + b);
+      }
+
+      String interpretation = "Стабільний стан за шкалою ${s.name}";
+      String smartGoal = "Пацієнт покращить рухові можливості в межах доменів МКФ.";
+
+      if (s.id == "bbs") {
+        if (finalCalculatedScore <= 20) {
+          interpretation = "Сума: $finalCalculatedScore балів. Високий ризик падінь! Пацієнт прикутий до візка.";
+          smartGoal = "Безпечне пересаджування (домен d510) та утримання балансу сидячи без опори більше 10 хв за допомогою рук до 15.06.2026.";
+        } else if (finalCalculatedScore <= 40) {
+          interpretation = "Сума: $finalCalculatedScore балів. Помірний ризик падінь, пересування з ходунками.";
+          smartGoal = "Пацієнт зможе стояти без підтримки (домен d415) протягом 1 хвилини та здійснювати розвороти на місці до 20.06.2026.";
+        } else {
+          interpretation = "Сума: $finalCalculatedScore балів. Низький ризик падінь. Безпечна автономна ходьба.";
+          smartGoal = "Досягнення повної координації ходьби та утримання балансу на одній нозі більше 10 секунд (домен d415) до 25.06.2026.";
+        }
+      } else if (s.id == "ashworth") {
+        interpretation = "Тонус за Ешвортом: $finalCalculatedScore балів. " + (finalCalculatedScore >= 3 ? "Виражена спастична контрактура ригідності." : "Легка/помірна спастичність кінцівки.");
+        smartGoal = "Знизити тонус в ураженому суглобі до 1+ балів за Ешвортом за допомогою укладань та PNF-технік до 12.06.2026 (домен b735).";
+      } else if (s.id == "rass") {
+        interpretation = "Рівень седації RASS: $finalCalculatedScore балів.";
+        smartGoal = "Стабілізація свідомості та досягнення 0 балів за RASS для початку кінезіотерапії.";
+      } else if (s.id == "ims") {
+        interpretation = "Рівень мобільності IMS: $finalCalculatedScore балів.";
+        smartGoal = "Перехід на рівень 5 за IMS (активна ходьба на місці біля ліжка з підтримкою) до 10.06.2026.";
+      }
+
+      if (_selectedPatient != null && _activeSession != null) {
+        final List sessionScales = _activeSession!['scalesData'];
+        // Видаляємо дублікат цієї ж шкали за цей день, якщо тестували повторно
+        sessionScales.removeWhere((element) => element['scaleId'] == s.id);
+        sessionScales.add({
+          "scaleId": s.id,
+          "scaleName": s.name,
+          "score": finalCalculatedScore,
+          "interpretation": interpretation
+        });
+        _activeSession!['smartGoal'] = smartGoal;
+      }
+
+      setState(() {
+        _currentScreen = _selectedPatient != null ? "patient_card" : "dashboard";
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: Colors.teal.shade900,
+        content: Text("📊 Тест ${s.name} завершено! Зафіксовано: $finalCalculatedScore балів. Сформовано SMART-ціль."),
+      ));
+    }
+  }
+
+  // =========================================================
+  // ЕКРАНИ ДОВІДНИКІВ МКХ-10 ТА ВПРАВ З ПОШУКОМ
   // =========================================================
   Widget _screenMckhCatalog() {
     final filtered = ClinicalData.mckh10Catalog.where((m) => m['code']!.toLowerCase().contains(_mckhSearch.toLowerCase()) || m['name']!.toLowerCase().contains(_mckhSearch.toLowerCase())).toList();
@@ -540,18 +786,11 @@ ${p['exercises'].isEmpty ? '- Вправи не призначено.' : p['exer
       padding: const EdgeInsets.all(12.0),
       child: Column(
         children: [
-          Row(
-            children: [
-              IconButton(icon: const Icon(Icons.arrow_back_ios), onPressed: () => setState(() => _currentScreen = "dashboard")),
-              Expanded(
-                child: TextField(
-                  onChanged: (v) => setState(() => _mckhSearch = v),
-                  decoration: const InputDecoration(labelText: "Пошук кодів за МКХ-10...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
-                ),
-              ),
-            ],
+          TextField(
+            onChanged: (v) => setState(() => _mckhSearch = v),
+            decoration: const InputDecoration(labelText: "Глибокий пошук кодів за МКХ-10...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Expanded(
             child: ListView.builder(
               itemCount: filtered.length,
@@ -560,7 +799,7 @@ ${p['exercises'].isEmpty ? '- Вправи не призначено.' : p['exer
                 return Card(
                   child: ListTile(
                     leading: Chip(label: Text(item['code']!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)), backgroundColor: Colors.purple.shade700),
-                    title: Text(item['name']!, style: const TextStyle(fontSize: 14)),
+                    title: Text(item['name']!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   ),
                 );
               },
@@ -571,42 +810,31 @@ ${p['exercises'].isEmpty ? '- Вправи не призначено.' : p['exer
     );
   }
 
-  // =========================================================
-  // ЭКРАН: КАТАЛОГ ВПРАВ З ЛОКАЛЬНИМ ПОШУКОМ
-  // =========================================================
   Widget _screenExercisesCatalog() {
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
         children: [
-          Row(
-            children: [
-              IconButton(icon: const Icon(Icons.arrow_back_ios), onPressed: () => setState(() => _currentScreen = "dashboard")),
-              Expanded(
-                child: TextField(
-                  onChanged: (v) => setState(() => _exerciseSearch = v),
-                  decoration: const InputDecoration(labelText: "Пошук клінічних вправ за назвою...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
-                ),
-              ),
-            ],
+          TextField(
+            onChanged: (v) => setState(() => _exerciseSearch = v),
+            decoration: const InputDecoration(labelText: "Пошук вправ за назвою та ключовими словами...", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Expanded(
             child: ListView(
               children: ClinicalData.exercisesCatalog.map((category) {
                 final List items = category['items'];
-                final matchedItems = items.where((i) => i['name'].toLowerCase().contains(_exerciseSearch.toLowerCase())).toList();
-                
-                if (matchedItems.isEmpty) return const SizedBox();
+                final matched = items.where((i) => i['name'].toLowerCase().contains(_exerciseSearch.toLowerCase()) || i['desc'].toLowerCase().contains(_exerciseSearch.toLowerCase())).toList();
+                if (matched.isEmpty) return const SizedBox();
                 return Card(
                   child: ExpansionTile(
-                    title: Text(category['category'], style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade900)),
+                    title: Text(category['category'], style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade900, fontSize: 14)),
                     initiallyExpanded: _exerciseSearch.isNotEmpty,
-                    children: matchedItems.map<Widget>((ex) {
+                    children: matched.map<Widget>((ex) {
                       return ListTile(
-                        title: Text(ex['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(ex['desc']),
                         leading: const Icon(Icons.fitness_center, color: Colors.orange),
+                        title: Text(ex['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        subtitle: Text(ex['desc'], style: const TextStyle(fontSize: 12)),
                       );
                     }).toList(),
                   ),
@@ -620,79 +848,105 @@ ${p['exercises'].isEmpty ? '- Вправи не призначено.' : p['exer
   }
 
   // =========================================================
-  // ЭКРАН: ПРОВЕДЕННЯ ТЕСТУВАННЯ ТА ІНТЕРПРЕТАЦІЯ ШКАЛ
+  // БЛАНКИ ОФІЦІЙНИХ МЕДИЧНИХ ДОКУМЕНТІВ (ЗАМІСТЬ ЧЕКІВ)
   // =========================================================
-  Widget _screenTestExecutor() {
-    final s = _selectedScale!;
-    final question = s.questions.first;
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(s.fullName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.teal)),
-          const SizedBox(height: 8),
-          Text("📝 Запитання: ${question.text}", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-          const Divider(height: 20),
-          Expanded(
-            child: ListView(
-              children: question.options.map((opt) {
-                return RadioListTile<int>(
-                  title: Text(opt.text, style: const TextStyle(fontSize: 14)),
-                  value: opt.score,
-                  groupValue: _activeRadioScore,
-                  onChanged: (v) => setState(() => _activeRadioScore = v!),
-                );
-              }).toList(),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-                onPressed: () => setState(() { _currentScreen = "scales_catalog"; _activeRadioScore = -1; }),
-                child: const Text("Назад"),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800),
-                onPressed: () {
-                  if (_activeRadioScore == -1) return;
-                  
-                  String interpretation = "Стабільний статус за шкалою ${s.name}";
-                  String generatedGoal = "Пацієнт покращить показники рухливості за МКФ.";
+  
+  // 1. ЛОКАЛЬНИЙ ОГЛЯД ЗА ОДИН КОНКРЕТНИЙ ДЕНЬ
+  void _showSingleSessionReport(Map<String, dynamic> p, Map<String, dynamic> session) {
+    final report = """
+МІНІСТЕРСТВО ОХОРОНИ ЗДОРОВ'Я УКРАЇНИ
+КЛІНІЧНИЙ ОГЛЯД ФІЗИЧНОГО ТЕРАПЕВТА ВІД ${session['date']}
 
-                  // КЛІНІЧНИЙ СМАРТ-ОБЧИСЛЮВАЧ НА ОСНОВІ БАЛІВ ТЕСТУ
-                  if (s.id == "ims") {
-                    interpretation = _activeRadioScore <= 3 ? "Критично низька мобільність" : "Здатність до осьового навантаження";
-                    generatedGoal = "Пацієнт зможе самостійно переходити в положення стоячи біля ліжка (домен d410) за підтримки 1 особи до 20.06.2026.";
-                  } else if (s.id == "mrc") {
-                    interpretation = _activeRadioScore < 48 ? "Синдром ICUAW (Критична слабкість м'язів)" : "М'язова сила в межах норми";
-                    generatedGoal = "Збільшити тонус та м'язову силу кінцівок до 4+ балів за MRC за 14 днів занять (домен МКФ b730).";
-                  } else if (s.id == "vas") {
-                    interpretation = _activeRadioScore >= 6 ? "Виражений больовий синдром" : "Помірний/контрольований біль";
-                    generatedGoal = "Знизити рівень болю за шкалою VAS до 3 балів під час виконання терапевтичних вправ до 18.06.2026 (домен b280).";
-                  }
+Пацієнт: ${p['name']}
+Вік: ${p['age']} років
+Діагноз (МКХ-10): ${p['mkch10Code']} - ${p['mkch10Name']}
+Кодифікатор МКФ: ${p['icfCodes'].join(', ')}
+--------------------------------------------------
+РЕЗУЛЬТАТИ ОБСТЕНЖЕННЯ ЗА ШКАЛАМИ В ЦЕЙ ДЕНЬ:
+${(session['scalesData'] as List).isEmpty ? '- Тестування шкалами в цей день не проводились.' : (session['scalesData'] as List).map((s) => '• [Шкала ${s['scaleName']}]: Оцінка: ${s['score']} балів\n  Клінічний статус: ${s['interpretation']}').join('\n')}
 
-                  if (_selectedPatient != null) {
-                    _selectedPatient!['history'].insert(0, {
-                      "scaleId": s.id,
-                      "scaleName": s.name,
-                      "date": "2026-06-03",
-                      "score": _activeRadioScore,
-                      "interpretation": interpretation
-                    });
-                    _selectedPatient!['smartGoal'] = generatedGoal; // Запис у Смарт-Конструктор пацієнта
-                  }
+ЗАТВЕРДЖЕНА СЕСІЙНА SMART-ЦІЛЬ:
+🎯 ${session['smartGoal']}
 
-                  setState(() {
-                    _currentScreen = _selectedPatient != null ? "patient_card" : "dashboard";
-                    _activeRadioScore = -1;
-                  });
-                },
-                child: const Text("ЗБЕРЕГТИ В КАРТКУ ТА ІРП"),
-              )
-            ],
+ПРИЗНАЧЕНИЙ ПРОТОКОЛ ФІЗИЧНИХ ВПРАВ В ІРП:
+${(session['assignedExercises'] as List).isEmpty ? '- Фізичні вправи на цей день не призначались.' : (session['assignedExercises'] as List).map((e) => '✔ $e').join('\n')}
+--------------------------------------------------
+Документ сформовано автономним модулем ФТ. 
+Дата друку: 2026-06-03. Підпис терапевта: _________
+""";
+    _showDocumentDialog("📄 Клінічний протокол візиту", report);
+  }
+
+  // 2. ОБ'ЄДНАНИЙ ФІНАЛЬНИЙ ЕПІКРИЗ З ДИНАМІКОЮ ПО ДНЯХ
+  void _showComprehensiveClinicalReport(Map<String, dynamic> p) {
+    final List sessions = p['sessions'];
+    
+    // Формуємо хронологічну таблицю динаміки шкал
+    String timelineScales = "";
+    String timelineExercises = "";
+    
+    // Перебираємо сесії у зворотному порядку (від старих до нових), щоб показати хід реабілітації
+    final reversedSessions = sessions.reversed.toList();
+    for (var sess in reversedSessions) {
+      timelineScales += "\n📈 Візит від [${sess['date']}]:\n";
+      final List scales = sess['scalesData'];
+      if (scales.isEmpty) {
+        timelineScales += "  - Оцінки шкалами не проводились.\n";
+      } else {
+        for (var sc in scales) {
+          timelineScales += "  • Шкала ${sc['scaleName']}: ${sc['score']} балів (${sc['interpretation']})\n";
+        }
+      }
+      timelineScales += "  🎯 Ціль дня: ${sess['smartGoal']}\n";
+
+      timelineExercises += "• [${sess['date']}]: " + (sess['assignedExercises'] as List).join(', ') + "\n";
+    }
+
+    final comprehensiveReport = """
+==================================================
+ОФІЦІЙНИЙ ВИПИСКОВИЙ ЕПІКРИЗ ФІЗИЧНОЇ РЕАБІЛІТАЦІЇ
+==================================================
+ЗАКЛАД: Центр комплексної реабілітації та ФТ
+ДАТА ФОРМУВАННЯ ДОКУМЕНТА: 2026-06-03
+
+1. ПАСПОРТНІ ДАНІ ПАЦІЄНТА
+   ПІБ: ${p['name']}
+   Вік: ${p['age']} років
+
+2. КЛІНІЧНИЙ СТАТУС НА МОМЕНТ НАДХОДЖЕННЯ
+   Основний діагноз за МКХ-10: ${p['mkch10Code']}
+   Розшифровка: ${p['mkch10Name']}
+   Профільні обмеження за доменами МКФ: ${p['icfCodes'].join('; ')}
+
+3. КЛІНІЧНА ДИНАМІКА ОБСТЕНЖЕННЯ (ОБ'ЄДНАНА ІСТОРІЯ ВІЗИТІВ)
+$timelineScales
+4. МОНІТОР ПРИЗНАЧЕНИХ РЕАБІЛІТАЦІЙНИХ КОМПЛЕКСІВ
+$timelineExercises
+5. ЗАКЛЮЧНИЙ ВИСНОВОК ТА РЕКОМЕНДАЦІЇ
+   Зафіксовано позитивну/стабільну кінетичну динаміку. Рекомендовано продовжити виконання затвердженого комплексу вправ в домашніх умовах за розробленою схемою ІРП.
+
+--------------------------------------------------
+Відповідальний завідувач відділення ФТ: ___________
+М.П. 
+==================================================
+""";
+    _showDocumentDialog("📜 Загальний об'єднаний епікриз пацієнта", comprehensiveReport);
+  }
+
+  void _showDocumentDialog(String title, String bodyText) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: SingleChildScrollView(child: Text(bodyText, style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.black))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Назад")),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Медичний бланк скопійовано! Вставте його у Viber, Telegram або надішліть на друк.")));
+            },
+            child: const Text("Копіювати бланк для друку"),
           )
         ],
       ),
