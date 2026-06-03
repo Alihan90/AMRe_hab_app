@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import 'screens/main_list_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const RehabApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class RehabApp extends StatelessWidget {
+  const RehabApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ВІТ Реабілітація',
+      title: 'Фізична Терапія & Шкали',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: const Color(0xFF1E293B),
-        useMaterial3: true, // Виправлено тут!
+        primarySwatch: Colors.teal,
+        scaffoldBackgroundColor: Colors.grey.shade100,
       ),
-      home: const MainListScreen(),
+      home: const HomeScreen(), // Головний екран завантажується першим
     );
   }
 }
