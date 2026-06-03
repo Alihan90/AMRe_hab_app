@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'data/clinical_data.dart';
-import 'models/scale_model.dart';
 
 void main() {
   runApp(const RehabApp());
@@ -34,7 +33,7 @@ List<Map<String, dynamic>> globalPatients = [
     "history": [
       {
         "scaleId": "ims", 
-        "date": "2026-06-01", 
+        "date": "2026-06-03", 
         "score": 4, 
         "interpretation": "Помірна мобільність"
       }
@@ -53,17 +52,15 @@ class MainDashboard extends StatefulWidget {
 
 class _MainDashboardState extends State<MainDashboard> {
   String _searchQuery = "";
-  String _currentScreen = "dashboard"; // Екрани: dashboard, scale_catalog, patient_card, create_patient, test_exec
+  String _currentScreen = "dashboard"; // dashboard, scale_catalog, patient_card, create_patient, test_exec
   Map<String, dynamic>? _selectedPatient;
   ClinicalScale? _selectedScale;
 
-  // Контролери для створення пацієнта
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   String _selectedMckh = "I63.3 (Ішемічний інсульт)";
   final List<String> _selectedIcf = [];
 
-  // Змінна для збереження балів тесту
   int _testScore = 0;
 
   @override
@@ -104,9 +101,7 @@ class _MainDashboardState extends State<MainDashboard> {
     }
   }
 
-  // ==========================================
-  // ЕКРАН 1: ГОЛОВНЕ МЕНЮ (DASHBOARD)
-  // ==========================================
+  // ЕКРАН 1: ГОЛОВНЕ МЕНЮ
   Widget _screenDashboard() {
     final filteredPatients = globalPatients
         .where((p) => p['name'].toLowerCase().contains(_searchQuery.toLowerCase()))
@@ -191,9 +186,7 @@ class _MainDashboardState extends State<MainDashboard> {
     );
   }
 
-  // ==========================================
-  // ЕКРАН 2: СТВОРЕННЯ ПАЦІЄНТА (МКХ-10 + МКФ)
-  // ==========================================
+  // ЕКРАН 2: СТВОРЕННЯ ПАЦІЄНТА
   Widget _screenCreatePatient() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -265,9 +258,7 @@ class _MainDashboardState extends State<MainDashboard> {
     );
   }
 
-  // ==========================================
-  // ЕКРАН 3: КАРТКА ПАЦІЄНТА + СМАРТ + ІРП + ШЕРИНГ
-  // ==========================================
+  // ЕКРАН 3: КАРТКА ПАЦІЄНТА
   Widget _screenPatientCard() {
     final p = _selectedPatient!;
     return ListView(
@@ -371,7 +362,7 @@ class _MainDashboardState extends State<MainDashboard> {
     );
   }
 
-  // ============= ФУНКЦІЯ ШЕРИНГУ / ДРУКУ ІРП =============
+  // ШЕРИНГ / ДРУКУ ІРП
   void _shareRealtimeIRP(Map<String, dynamic> p) {
     final String docText = """
 === ІНДИВІДУАЛЬНИЙ РЕАБІЛІТАЦІЙНИЙ ПЛАН (ІРП) ===
@@ -418,9 +409,7 @@ ${p['exercises'].map((ex) => "- $ex").join('\n')}
     );
   }
 
-  // ==========================================
-  // ЕКРАН 4: КАТАЛОГ 16 ШКАЛ
-  // ==========================================
+  // ЕКРАН 4: КАТАЛОГ ШКАЛ
   Widget _screenScaleCatalog() {
     final scales = ClinicalData.allScales;
     return Column(
@@ -478,23 +467,80 @@ ${p['exercises'].map((ex) => "- $ex").join('\n')}
     );
   }
 
-  // ==========================================
   // ЕКРАН 5: ЕКРАН ТЕСТУВАННЯ ТА ІНТЕРПРЕТАЦІЇ
-  // ==========================================
   Widget _screenTestExecutor() {
     final s = _selectedScale!;
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      children: [
-        Text("Проведення оцінки: ${s.name}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
-        const Divider(),
-        const SizedBox(height: 20),
-        Text(s.questions.first.text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        
-        ...s.questions.first.options.map((opt) {
-          return RadioListTile<int>(
-            title: Text(opt.text),
-            value: opt.score,
-            groupValue: _testScore,
-            onChanged: (val) => setState(() => _testScore = val!),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Проведення оцінки: ${s.name}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
+          const Divider(),
+          const SizedBox(height: 20),
+          Text(s.questions.first.text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          
+          Expanded(
+            child: ListView(
+              children: s.questions.first.options.map((opt) {
+                return RadioListTile<int>(
+                  title: Text(opt.text),
+                  value: opt.score,
+                  groupValue: _testScore,
+                  onChanged: (val) {
+                    setState(() {
+                      _testScore = val!;
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                onPressed: () => setState(() => _currentScreen = "scale_catalog"),
+                child: const Text("Назад до шкал"),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                onPressed: () {
+                  String interpretation = "Стан пацієнта стабільний за шкалою ${s.id.toUpperCase()}";
+                  String dynamicGoal = "Пацієнт відновить функціональний стан за МКФ на основі тесту ${s.id.toUpperCase()}.";
+
+                  if (s.id == "ims") {
+                    interpretation = _testScore <= 3 ? "Критично низька мобільність" : "Помірна мобільність";
+                    dynamicGoal = "Пацієнт зможе пересідати в крісло колісне з мінімальною підтримкою до 2 тижнів для адаптації (домен МКФ d410).";
+                  } else if (s.id == "mrc") {
+                    interpretation = _testScore < 48 ? "Синдром ICUAW (М'язова слабкість ВІТ)" : "Нормальна сила м'язів";
+                    dynamicGoal = "Збільшити м'язову силу кінцівок до 4+ балів за шкалою MRC за 10 днів терапії (домен МКФ b730).";
+                  }
+
+                  if (_selectedPatient != null) {
+                    _selectedPatient!['history'].insert(0, {
+                      "scaleId": s.id,
+                      "date": "2026-06-03",
+                      "score": _testScore,
+                      "interpretation": interpretation
+                    });
+                    _selectedPatient!['smartGoal'] = dynamicGoal; 
+                  }
+
+                  setState(() {
+                    _currentScreen = _selectedPatient != null ? "patient_card" : "dashboard";
+                    _testScore = 0;
+                  });
+                },
+                child: const Text("Зберегти в карту та ІРП"),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+}
