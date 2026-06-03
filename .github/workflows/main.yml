@@ -24,17 +24,10 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Reconstruct Android Project Platform
+      - name: Reconstruct Android Project
         run: |
           flutter create --platforms=android --project-name=amre_hab_app .
           flutter pub get
-
-      - name: Force Global Android SDK 34 via Gradle Properties
-        run: |
-          mkdir -p android
-          echo "flutter.compileSdkVersion=34" >> android/local.properties
-          echo "flutter.targetSdkVersion=34" >> android/local.properties
-          echo "flutter.minSdkVersion=23" >> android/local.properties
 
       - name: Compile Application APK
         run: flutter build apk --release --no-tree-shake-icons
