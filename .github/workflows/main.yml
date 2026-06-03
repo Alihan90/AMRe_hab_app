@@ -29,13 +29,16 @@ jobs:
           flutter create --platforms=android --project-name=amre_hab_app .
           flutter pub get
 
-      - name: Inject Android SDK 34 Overrides
+      - name: Force Android SDK 34 Core Config
         run: |
           if [ -f android/app/build.gradle ]; then
             sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
             sed -i 's/compileSdk .*/compileSdk 34/g' android/app/build.gradle || true
             sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
             sed -i 's/targetSdk .*/targetSdk 34/g' android/app/build.gradle || true
+            
+            sed -i 's/flutter.compileSdkVersion.*/34/g' android/local.properties || true
+            sed -i 's/flutter.targetSdkVersion.*/34/g' android/local.properties || true
           fi
 
       - name: Compile Application APK
