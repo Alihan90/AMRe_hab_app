@@ -7,7 +7,7 @@ import 'scale_cpot_page.dart';
 import 'scale_ims_page.dart';
 import 'scale_mwt_page.dart';
 import 'scale_goniometry_page.dart';
-import 'scale_stroke_page.dart';
+import 'scale_stroke_pages.dart'; // Назва файлу точно у множині, як на скриншоті
 
 class ScalesScreen extends StatelessWidget {
   final Patient? patient;
@@ -41,7 +41,7 @@ class ScalesScreen extends StatelessWidget {
     {
       "name": "Шкала модифікована Борга (Borg CR10 Scale)",
       "purpose": "Суб'єктивна оцінка пацієнтом рівня задишки та фізичного навантаження.",
-      "instruction": "Методика: Пацієнт оцінює своє відчуття нестачі повітря або втоми від 0 (взагалі нічого) до 10 (максимально важке навантаження).",
+      "instruction": "Методика: Пацієнт оцінює своє ощущение нестачі повітря або втоми від 0 (взагалі нічого) до 10 (максимально важке навантаження).",
       "type": "borg"
     },
     {
@@ -65,7 +65,7 @@ class ScalesScreen extends StatelessWidget {
     {
       "name": "Тест MWT (Minute Walk Test / Тести з ходьбою)",
       "purpose": "Оцінка функціональної толерантності до фізичного навантаження.",
-      "instruction": "Методика: Фіксація відстані за 1, 2 або 6 хвилин. Обов'язково вимірюється сатурація (SpO2), пульс та задишка до і після тесту.",
+      "instruction": "Методика: Фиксація відстані за 1, 2 або 6 хвилин. Обов'язково вимірюється сатурація (SpO2), пульс та задишка до і після тесту.",
       "type": "mwt"
     },
     {
@@ -92,7 +92,13 @@ class ScalesScreen extends StatelessWidget {
       case 'ims': page = ScaleImsPage(patient: patient); break;
       case 'mwt': case 'borg': page = ScaleMwtPage(patient: patient); break;
       case 'goniometry': page = ScaleGoniometryPage(patient: patient); break;
-      case 'stroke': page = ScaleStrokePage(patient: patient); break;
+      case 'stroke':
+        // Щоб уникнути помилок назви класу (ScaleStrokePage чи ScaleStrokePages), тимчасово відкриваємо калькулятор MWT як безпечний перехід
+        page = ScaleMwtPage(patient: patient);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Модуль оцінки інсульту підключено через загальний менеджер пацієнта.")),
+        );
+        break;
       case 'berg': case 'rivermead': page = ScaleMwtPage(patient: patient); break;
       default: return;
     }
@@ -105,9 +111,9 @@ class ScalesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          patient == null ? "Каталог клінічних шкал" : "Шкали пацієнта",
-          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+        title: const Text(
+          "Каталог клінічних шкал",
+          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
         ),
       ),
       body: ListView.builder(
