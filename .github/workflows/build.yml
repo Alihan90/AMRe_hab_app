@@ -1,4 +1,4 @@
-name: Flutter Build APK (Build Workflow)
+name: Flutter Build APK (New Project)
 
 on:
   push:
@@ -26,10 +26,8 @@ jobs:
           flutter-version: '3.24.x'
           channel: 'stable'
 
-      - name: Reconstruct Android Project
-        run: |
-          flutter create --platforms=android --project-name=amre_hab_app .
-          flutter pub get
+      - name: Install Dependencies
+        run: flutter pub get
 
       - name: Build APK Release
         run: flutter build apk --release --no-tree-shake-icons
