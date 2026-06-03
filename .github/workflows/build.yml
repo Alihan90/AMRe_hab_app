@@ -31,13 +31,18 @@ jobs:
           flutter create --platforms=android --project-name=amre_hab_app .
           flutter pub get
 
-      - name: Auto-fix Android SDK Version to 34
+      - name: Force Android SDK 34 Core Config
         run: |
           if [ -f android/app/build.gradle ]; then
+            # Замінюємо будь-які згадки версій компіляції на 34
             sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
             sed -i 's/compileSdk .*/compileSdk 34/g' android/app/build.gradle || true
             sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
             sed -i 's/targetSdk .*/targetSdk 34/g' android/app/build.gradle || true
+            
+            # Додатково коригуємо файл налаштувань самого Gradle, якщо він створений через змінні
+            sed -i 's/flutter.compileSdkVersion.*/34/g' android/local.properties || true
+            sed -i 's/flutter.targetSdkVersion.*/34/g' android/local.properties || true
           fi
 
       - name: Build APK Release
