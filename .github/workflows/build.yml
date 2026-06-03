@@ -3,44 +3,40 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: macos-latest # Потрібно для збірки iOS
+    runs-on: macos-latest # Потрібно для хмарної збірки під iOS та Android
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
       
-      # Генеруємо відсутні папки проектів
+      # Автоматично створюємо папки android та ios, яких немає на GitHub
       - name: Create Platform Folders
         run: flutter create .
 
       - name: Install Dependencies
         run: flutter pub get
 
-      # Збірка для Android
+      # Збірка для Android (на виході отримаєш готовий APK)
       - name: Build APK
         run: flutter build apk --release
 
-      # Збірка для iOS (Simulator version)
+      # Збірка для iOS
       - name: Build iOS
         run: flutter build ios --no-codesign
 
-      # Завантаження готових файлів у GitHub
+      # Завантаження готових файлів у вкладку Actions
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: Release-Builds
+          name: Rehab-App-Builds
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/ios/iphoneos/*.app
-
-**Крок 2: Отримай файли**
-1. Після натискання `Commit changes`, перейди у вкладку **Actions** зверху на GitHub.
-2. Ти побачиш процес "Build Mobile Apps". Дочекайся зеленої галочки (це займе 5-10 хв).
-3. Натисни на завершений процес, прокрути вниз до розділу **Artifacts**.
-4. Там буде архів `Release-Builds`. Скачай його — всередині твої готові додатки.
-
-**Щодо iPhone:** 
-Для встановлення на реальний iPhone поза App Store зазвичай потрібен сертифікат розробника Apple. Проте, отримавши файл `.app` з GitHub, ти зможеш відкрити його в емуляторі або використовувати сервіси типу **Diawi**, щоб спробувати встановити його на свій пристрій.
-
-Твій проект на 100% готовий до професійного використання!
