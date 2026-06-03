@@ -1,7 +1,7 @@
-```dart
 import 'package:flutter/material.dart';
 import '../data/clinical_data.dart';
 import '../models/scale_model.dart';
+import 'test_executor_screen.dart'; // Імпорт екрану тестування (Крок 4)
 
 class ScalesListScreen extends StatefulWidget {
   const ScalesListScreen({Key? key}) : super(key: key);
@@ -47,7 +47,7 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: Cross CrossAxisAlignment.start,
               children: [
                 // Основна інформація картки
                 ListTile(
@@ -87,7 +87,7 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                   ),
                 ),
 
-                // Блок з інструкцією та описом, який розгортається
+                // Блок з інструкцією та описом, який розгортається по кліку на іконку "info"
                 if (isExpanded)
                   Container(
                     width: double.infinity,
@@ -101,11 +101,11 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.menu_book, size: 18, color: Colors.amber McCutcheon = Colors.amber.shade800),
-                            SizedBox(width: 6),
-                            Text(
+                            Icon(Icons.menu_book, size: 18, color: Colors.amber.shade800),
+                            const SizedBox(width: 6),
+                            const Text(
                               "Інструкція та обґрунтування:",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -127,7 +127,7 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                     ),
                   ),
 
-                // Кнопка для запуску тестування
+                // Кнопка для реального запуску тестування
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 12.0, top: 4.0),
                   child: Row(
@@ -135,9 +135,12 @@ class _ScalesListScreenState extends State<ScalesListScreen> {
                     children: [
                       TextButton.icon(
                         onPressed: () {
-                          // TODO: Додамо перехід на екран проведення конкретного тесту в наступному кроці
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Запуск тесту: ${scale.id}')),
+                          // Перехід на екран проведення конкретного тесту
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TestExecutorScreen(scale: scale),
+                            ),
                           );
                         },
                         icon: const Icon(Icons.play_arrow, color: Colors.teal),
