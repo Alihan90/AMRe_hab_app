@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/patient.dart';
-import 'dashboard_screen.dart';
+import 'patient_card_screen.dart';
+import 'scales_screen.dart';
 
 class MainListScreen extends StatefulWidget {
   const MainListScreen({super.key});
@@ -16,16 +17,6 @@ class _MainListScreenState extends State<MainListScreen> {
   List<Patient> _filteredPatients = [];
   final TextEditingController _searchController = TextEditingController();
 
-  // Повний вбудований довідник МКХ для реанімації
-  final List<String> _icdCatalog = [
-    "I63.9 Інфаркт мозку (ГПМК)",
-    "G73.7 Міопатія при критичних станах (ПІТ-М)",
-    "T06.8 Інші множинні травми (Політравма)",
-    "J96.0 Гостра дихальна недостатність (ГДН)",
-    "A41.9 Сепсис неуточнений",
-    "U07.1 COVID-19",
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -33,7 +24,6 @@ class _MainListScreenState extends State<MainListScreen> {
     _searchController.addListener(_filterPatients);
   }
 
-  // Завантаження пацієнтів із пам'яті телефона
   Future<void> _loadPatients() async {
     final prefs = await SharedPreferences.getInstance();
     final String? data = prefs.getString('patients_list');
@@ -44,103 +34,28 @@ class _MainListScreenState extends State<MainListScreen> {
         _filteredPatients = _patients;
       });
     } else {
-      // Якщо база порожня, додамо одного тестового
-      final defaultPatient = Patient(
-        id: "1",
-        fullName: "Коваленко Андрій Петрович",
-        age: "58",
-        roomNumber: "3",
-        icdDiagnosis: "I63.9 Інфаркт мозку (ГПМК)",
-        mrcHistory: [24, 28, 34, 40, 44],
-        imsHistory: [1, 1, 2, 3, 4],
-        sessionDates: List.generate(5, (i) => DateTime.now().subtract(Duration(days: 4 - i))),
-        currentSmartGoal: "Пацієнт зможе самостійно переходити в положення сидіння.",
-      );
-      setState(() {
-        _patients = [defaultPatient];
-        _filteredPatients = _patients;
-      });
-      _savePatients();
+      _createMockData();
     }
   }
 
-  Future<void> _savePatients() async {
+  void _createMockData() async {
     final prefs = await SharedPreferences.getInstance();
-    final String encoded = json.encode(_patients.map((p) => p.toMap()).toList());
-    await prefs.setString('patients_list', encoded);
+    List<Patient> mock = [
+      Patient(id: "1", fullName: "Іванов Петро Сидорович", age: 54, chamber: "ВІТ-2, ліжко 3", diagnosis: "ГПМК, правобічний геміпарез", currentSmartGoal: "Стабілізація сидячи 10 хв"),
+      Patient(id: "2", fullName: "Сидоров Олег Миколайович", age: 43, chamber: "ВІТ-1, ліжко 1", diagnosis: "ЧМТ, забій головного мозку", currentSmartGoal: "Збільшення мобільності в ліжку"),
+    ];
+    setState(() {
+      _patients = mock;
+      _filteredPatients = mock;
+    });
+    await prefs.setString('patients_list', json.encode(mock.map((p) => p.toMap()).toList()));
   }
 
   void _filterPatients() {
-    final query = _searchController.text.toLowerCase();
+    String query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredPatients = _patients.where((p) {
-        return p.fullName.toLowerCase().contains(query) || p.roomNumber.contains(query);
-      }).toList();
+      _filteredPatients = _patients.where((p) => p.fullName.toLowerCase().contains(query)).toList();
     });
-  }
-
-  // Вікно створення нового пацієнта
-  void _showAddPatientDialog() {
-    final nameCtrl = TextEditingController();
-    final ageCtrl = TextEditingController();
-    final roomCtrl = TextEditingController();
-    String selectedIcd = _icdCatalog.first;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text("Додати пацієнта ВІТ"),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "ПІБ Пацієнта")),
-                    TextField(controller: ageCtrl, decoration: const InputDecoration(labelText: "Вік"), keyboardType: TextInputType.number),
-                    TextField(controller: roomCtrl, decoration: const InputDecoration(labelText: "Палата / Ліжко")),
-                    const SizedBox(height: 16),
-                    const Text("Діагноз МКХ:", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    DropdownButton<String>(
-                      value: selectedIcd,
-                      isExpanded: true,
-                      items: _icdCatalog.map((icd) => DropdownMenuItem(value: icd, child: Text(icd, style: const TextStyle(fontSize: 13)))).toList(),
-                      onChanged: (val) => setDialogState(() => selectedIcd = val!),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text("Скасувати")),
-                ElevatedButton(
-                  onPressed: () {
-                    if (nameCtrl.text.isEmpty) return;
-                    final newPatient = Patient(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      fullName: nameCtrl.text,
-                      age: ageCtrl.text,
-                      roomNumber: roomCtrl.text,
-                      icdDiagnosis: selectedIcd,
-                      mrcHistory: [20], // Початкова точка
-                      imsHistory: [0],  // Початковий IMS
-                      sessionDates: [DateTime.now()],
-                    );
-                    setState(() {
-                      _patients.add(newPatient);
-                      _filterPatients();
-                    });
-                    _savePatients();
-                    Navigator.pop(context);
-                  },
-                  child: const Text("Зберегти"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
   }
 
   @override
@@ -148,25 +63,49 @@ class _MainListScreenState extends State<MainListScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
-        title: const Text("Електронний Журнал ВІТ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text("ВІТ Реабілітація", style: TextStyle(color: Colors.white, fontWeight: Colors.bold)),
       ),
       body: Column(
         children: [
-          // Пошуковий рядок
+          // Блок швидкого переходу до загальних шкал
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF1E293B), Color(0xFF334155)]),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Клінічні оцінки та шкали", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: Colors.bold)),
+                const SizedBox(height: 4),
+                const Text("Швидкий доступ до інструкцій та калькуляторів без прив'язки до картки пацієнта.", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.purple.shade700, foregroundColor: Colors.white),
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ScalesScreen(patient: null))),
+                  icon: const Icon(Icons.Assessment),
+                  label: const Text("Відкрити каталог шкал"),
+                )
+              ],
+            ),
+          ),
+          // Пошук пацієнтів
           Padding(
-            padding: const EdgeInsets.all(12.0),
-            key: const ValueKey("search_bar"),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: "Пошук за ПІБ або палатою...",
+                hintText: "Пошук пацієнта за ПІБ...",
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                filled: true,
-                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
               ),
             ),
           ),
+          const SizedBox(height: 8),
           // Список пацієнтів
           Expanded(
             child: _filteredPatients.isEmpty
@@ -174,36 +113,21 @@ class _MainListScreenState extends State<MainListScreen> {
                 : ListView.builder(
                     itemCount: _filteredPatients.length,
                     itemBuilder: (context, index) {
-                      final p = _filteredPatients[index];
+                      final patient = _filteredPatients[index];
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.blue.shade800,
-                            child: Text(p.roomNumber, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                          ),
-                          title: Text(p.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text("МКХ: ${p.icdDiagnosis}\nВік: ${p.age} р."),
+                          leading: const CircleAvatar(backgroundColor: Color(0xFF334155), child: Icon(Icons.person, color: Colors.white)),
+                          title: Text(patient.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          subtitle: Text("${patient.chamber} • ${patient.diagnosis}", maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: () async {
-                            // Переходимо в карту конкретного пацієнта
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => DashboardScreen(patient: p)),
-                            );
-                            _loadPatients(); // Оновлюємо дані при поверненні
-                          },
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PatientCardScreen(patient: patient))).then((_) => _loadPatients()),
                         ),
                       );
                     },
                   ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF1E293B),
-        onPressed: _showAddPatientDialog,
-        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
