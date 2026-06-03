@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/patient.dart';
 import 'scale_rass_page.dart';
+import 'scale_mrc_page.dart';
+import 'scale_cpax_page.dart';
+import 'scale_cpot_page.dart';
+import 'scale_ims_page.dart';
+import 'scale_mwt_page.dart';
+import 'scale_goniometry_page.dart';
+import 'scale_stroke_pages.dart';
 
 class ScalesScreen extends StatelessWidget {
   final Patient? patient;
@@ -20,27 +27,77 @@ class ScalesScreen extends StatelessWidget {
       "type": "mrc"
     },
     {
-      "name": "Шкала рівноваги Берга (Berg Balance Scale)",
-      "purpose": "Контроль статичного та динамічного балансу, оцінка ризику падіння пацієнта.",
-      "instruction": "Методика: Пацієнту пропонується виконати 14 функціональних завдань (вставання зі стільця, стояння без підтримки, пересаджування, стояння із заплющеними очима тощо). Кожне завдання оцінюється від 0 до 4 балів залежно від якості та швидкості виконання.",
-      "type": "berg"
+      "name": "Індекс мобільності CPAx (Chelsea Critical Care Physical Assessment Tool)",
+      "purpose": "Комплексна оцінка фізичної спроможності пацієнтів, які перебувають на ШВЛ та в інтенсивній терапії.",
+      "instruction": "Методика: Оцінюється 10 функціональних компонентів (дихальна функція, кашель, рухливість у ліжку, вставання, пересаджування тощо) за шкалою від 0 до 5. Дозволяє чітко відстежувати мікро-прогрес у пацієнтів на етапі реанімації.",
+      "type": "cpax"
     },
     {
-      "name": "Індекс мобільності Рівермід (Rivermead Mobility Index)",
-      "purpose": "Оцінка базової рухової активності та рівня самостійності переміщення.",
-      "instruction": "Методика: Складається з 14 питань до пацієнта (або спостережень) та 1 практичного тесту (стояння без підтримки 10 сек). Питання покривають градієнт від поворотів у ліжку до підйому по сходах. За кожне 'Так' нараховується 1 бал.",
-      "type": "rivermead"
+      "name": "Шкала CPOT (Critical-Care Pain Observation Tool)",
+      "purpose": "Об'єктивна оцінка рівня болю у пацієнтів, які не можуть розмовляти або перебувають без свідомості.",
+      "instruction": "Методика: Оцініть 4 поведінкові ознаки: вираз обличчя (0-2 бали), рухова активність (0-2 бали), опір апарату ШВЛ або вокалізація (0-2 бали) та м'язовий тонус за пасивного згинання/розгинання рук (0-2 бали). Сума > 2 свідчить про наявність болю.",
+      "type": "cpot"
+    },
+    {
+      "name": "Шкала мобільності IMS (Intensive Care Unit Mobility Scale)",
+      "purpose": "Швидка фіксація найвищого рівня мобільності пацієнта у відділенні інтенсивної терапії протягом доби.",
+      "instruction": "Методика: Оцініть реальну активність пацієнта за день за шкалою від 0 до 10. Бал 0 — пацієнт пасивний у ліжку. Бал 5 — пацієнт активно сидить на краю ліжка. Бал 10 — пацієнт самостійно ходить без допоміжних засобів.",
+      "type": "ims"
+    },
+    {
+      "name": "Тест MWT (Minute Walk Test / Хвилинні тести з ходьбою)",
+      "purpose": "Оцінка функціональної витривалості, серцево-судинної та дихальної систем до навантажень.",
+      "instruction": "Методика: Пацієнту пропонується пройти максимально можливу дистанцію по безпечному коридору за фіксований час (1, 2 або 6 хвилин). Терапевт рахує метраж, фіксує задишку за шкалою Борга та рівень сатурації до і після тесту.",
+      "type": "mwt"
+    },
+    {
+      "name": "Клінічна Гоніометрія (Goniometry)",
+      "purpose": "Вимірювання точних кутів амплітуди пасивних та активних рухів у суглобах.",
+      "instruction": "Методика: Встановіть стаціонарне плече гоніометра паралельно проксимальному сегменту кінцівки, вісь — на анатомічний центр суглоба, рухоме плече — вздовж дистального сегмента. Виконайте рух та зафіксуйте кут в градусах.",
+      "type": "goniometry"
+    },
+    {
+      "name": "Неврологічні Шкали Інсульту (Stroke Pages / NIHSS)",
+      "purpose": "Експрес-діагностика неврологічного дефіциту та динаміки стану при гострому порушенні мозкового кровообігу.",
+      "instruction": "Методика: Покрокове тестування рівня свідомості, рухів очей, полів зору, парезів обличчя, сили рук та ніг, атаксії, чутливості та мови. Оцінюється кожен окремий сегмент для локалізації та контролю динаміки ураження.",
+      "type": "stroke"
     }
   ];
 
   void _navigateToScale(BuildContext context, String type) {
-    if (type == 'rass') {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleRassPage(patient: patient)));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Модуль для $type зараз інтегрується автоматично...")),
-      );
+    Widget page;
+    switch (type) {
+      case 'rass':
+        page = ScaleRassPage(patient: patient);
+        break;
+      case 'mrc':
+        page = ScaleMrcPage(patient: patient);
+        break;
+      case 'cpax':
+        page = ScaleCpaxPage(patient: patient);
+        break;
+      case 'cpot':
+        page = ScaleCpotPage(patient: patient);
+        break;
+      case 'ims':
+        page = ScaleImsPage(patient: patient);
+        break;
+      case 'mwt':
+        page = ScaleMwtPage(patient: patient);
+        break;
+      case 'goniometry':
+        page = ScaleGoniometryPage(patient: patient);
+        break;
+      case 'stroke':
+        page = ScaleStrokePages(patient: patient);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Помилка: Модуль не знайдено.")),
+        );
+        return;
     }
+    Navigator.push(context, MaterialPageRoute(builder: (context) => page));
   }
 
   @override
@@ -49,7 +106,10 @@ class ScalesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(patient == null ? "Каталог клінічних шкал" : "Шкали: ${patient!.fullName}", style: const TextStyle(color: Colors.white, fontSize: 15)),
+        title: Text(
+          patient == null ? "Каталог клінічних шкал" : "Шкали: ${patient!.fullName}",
+          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: Colors.bold),
+        ),
       ),
       body: ListView.builder(
         itemCount: _scalesData.length,
