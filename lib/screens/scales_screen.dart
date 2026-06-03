@@ -1,17 +1,47 @@
 import 'package:flutter/material.dart';
 import '../models/patient.dart';
-import 'scale_ims_page.dart';
-import 'scale_mrc_page.dart';
 import 'scale_rass_page.dart';
-import 'scale_cpax_page.dart';
-import 'scale_cpot_page.dart';
-import 'scale_stroke_pages.dart';
-import 'scale_mwt_page.dart';
-import 'scale_goniometry_page.dart';
 
 class ScalesScreen extends StatelessWidget {
   final Patient? patient;
   const ScalesScreen({super.key, this.patient});
+
+  final List<Map<String, dynamic>> _scalesData = const [
+    {
+      "name": "Шкала RASS (Richmond Agitation-Sedation Scale)",
+      "purpose": "Оцінка рівня седації та збудження пацієнта в умовах інтенсивної терапії.",
+      "instruction": "Методика: Спостерігайте за пацієнтом. Якщо він спокійний — бал 0. Якщо агресивний чи збуджений — бали від +1 до +4. Якщо сонливий, зверніться до нього голосом та оцініть тривалість зорового контакту (бали від -1 до -3). Якщо реакція лише на фізичний подразник — бали -4 та -5.",
+      "type": "rass"
+    },
+    {
+      "name": "Тест MRC-SumScore (Medical Research Council)",
+      "purpose": "Оцінка загальної м'язової сили у пацієнтів критичних станів (діагностика слабкості, набутої у ВІТ).",
+      "instruction": "Методика: Тестуються 6 м'язових груп симетрично з обох боків (відведення плеча, згинання передпліччя, розгинання кисті, згинання стегна, розгинання коліна, тильне згинання стопи). Кожен рух оцінюється від 0 (немає скорочень) до 5 (нормальна сила). Максимум — 60 балів.",
+      "type": "mrc"
+    },
+    {
+      "name": "Шкала рівноваги Берга (Berg Balance Scale)",
+      "purpose": "Контроль статичного та динамічного балансу, оцінка ризику падіння пацієнта.",
+      "instruction": "Методика: Пацієнту пропонується виконати 14 функціональних завдань (вставання зі стільця, стояння без підтримки, пересаджування, стояння із заплющеними очима тощо). Кожне завдання оцінюється від 0 до 4 балів залежно від якості та швидкості виконання.",
+      "type": "berg"
+    },
+    {
+      "name": "Індекс мобільності Рівермід (Rivermead Mobility Index)",
+      "purpose": "Оцінка базової рухової активності та рівня самостійності переміщення.",
+      "instruction": "Методика: Складається з 14 питань до пацієнта (або спостережень) та 1 практичного тесту (стояння без підтримки 10 сек). Питання покривають градієнт від поворотів у ліжку до підйому по сходах. За кожне 'Так' нараховується 1 бал.",
+      "type": "rivermead"
+    }
+  ];
+
+  void _navigateToScale(BuildContext context, String type) {
+    if (type == 'rass') {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleRassPage(patient: patient)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Модуль для $type зараз інтегрується автоматично...")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,71 +49,39 @@ class ScalesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(patient == null ? "Інструментальні Шкали" : "Оцінка пацієнта", 
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(patient == null ? "Каталог клінічних шкал" : "Шкали: ${patient!.fullName}", style: const TextStyle(color: Colors.white, fontSize: 15)),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (patient != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text("Тестування для: ${patient!.fullName}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
+      body: ListView.builder(
+        itemCount: _scalesData.length,
+        itemBuilder: (context, index) {
+          final scale = _scalesData[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(scale["name"], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+                  const SizedBox(height: 6),
+                  Text("🎯 Мета: ${scale["purpose"]}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.blueGrey)),
+                  const SizedBox(height: 4),
+                  Text("📋 Інструкція: ${scale["instruction"]}", style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E293B), foregroundColor: Colors.white),
+                      onPressed: () => _navigateToScale(context, scale["type"]),
+                      icon: const Icon(Icons.play_arrow, size: 16),
+                      label: const Text("Перейти до тестування", style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                ],
+              ),
             ),
-
-          _buildSectionHeader("📐 Біомеханіка та Амплітуда рухів (ROM)"),
-          _buildCard(context, "Інтерактивна гоніометрія суглобів", "Вимір кутів згинання/відведення верхніх та нижніх кінцівок із відображенням анатомічних норм.", Colors.deepPurple, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleGoniometryPage(patient: patient)))),
-
-          _buildSectionHeader("🧠 ВІТ та Рання мобільність (Седація, Біль, Рух)"),
-          _buildCard(context, "Шкала мобільності IMS", "Оцінка мобільності в реанімації від ліжка до ходьби (0–7 балів).", Colors.green, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleImsPage(patient: patient)))),
-          _buildCard(context, "Індекс CPAX", "Клінічний профіль мобільності ВІТ (дихання, кушетка, баланс, сила) (0–50 балів).", Colors.green, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleCpaxPage(patient: patient)))),
-          _buildCard(context, "Сила м'язів MRC-SumScore", "Мануальне тестування 6 симетричних груп м'язів для діагностики ICU-AW (0–60 балів).", Colors.blue, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleMrcPage(patient: patient)))),
-          _buildCard(context, "Седація RASS", "Контроль рівня свідомості та глибини седації перед початком руху (від -5 до +4).", Colors.purple, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleRassPage(patient: patient)))),
-          _buildCard(context, "Біль CPOT", "Поведенічний індикатор болю у критичних пацієнтів (вираз обличчя, рухи, ШВЛ) (0–8 балів).", Colors.red, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleCpotPage(patient: patient)))),
-
-          _buildSectionHeader("⚡ Неврологія / Інсульт (Когніція, Баланс, Спастика)"),
-          _buildCard(context, "MoCA Тест", "Монреальська шкала оцінки когнітивних функцій (увага, пам'ять, праксис) (0–30 балів).", Colors.orange, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => NeuroScalePage(type: "MoCA", patient: patient)))),
-          _buildCard(context, "Рівні когнітивного відновлення Rancho Los Amigos", "Оцінка поведінкової та інтелектуальної готовності до реабілітації (I–VIII рівні).", Colors.orange, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => NeuroScalePage(type: "Rancho", patient: patient)))),
-          _buildCard(context, "Індекс мобільності Рівермід (RMI)", "Послідовна оцінка рухової активності та самостійності в побуті (0–15 балів).", Colors.teal, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => NeuroScalePage(type: "Rivermead", patient: patient)))),
-          _buildCard(context, "Шкала балансу Берга (BBS)", "Комплексна оцінка статичного та динамічного балансу для прогнозу ризику падінь (0–56 балів).", Colors.teal, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => NeuroScalePage(type: "Berg", patient: patient)))),
-          _buildCard(context, "Модифікована шкала Ашворт (MAS)", "Оцінка м'язового тонусу та ступеня спастичності суглобів (0, 1, 1+, 2, 3, 4).", Colors.indigo, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => NeuroScalePage(type: "Ashworth", patient: patient)))),
-
-          _buildSectionHeader("ань Кардіо-респіраторна система"),
-          _buildCard(context, "Тест 6-хвилинної ходьби (6MWT) + Шкала Борга", "Розрахунок належної відстані за Enright, оцінка задишки та толерантності до навантаження.", Colors.deepOrange, 
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => ScaleMwtPage(patient: patient)))),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 6, left: 4),
-      child: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-    );
-  }
-
-  Widget _buildCard(BuildContext context, String title, String desc, Color color, VoidCallback onTap) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        leading: CircleAvatar(backgroundColor: color.withOpacity(0.1), child: Icon(Icons.straighten_rounded, color: color, size: 18)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Text(desc, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-        trailing: const Icon(Icons.chevron_right, size: 18),
-        onTap: onTap,
+          );
+        },
       ),
     );
   }
