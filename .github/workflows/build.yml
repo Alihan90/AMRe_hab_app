@@ -23,11 +23,13 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x' # автоматично підхопить актуальну стабільну версію
+          flutter-version: '3.24.x'
           channel: 'stable'
 
-      - name: Install dependencies
-        run: flutter pub get
+      - name: Reconstruct Android Project Platform
+        run: |
+          flutter create --platforms=android .
+          flutter pub get
 
       - name: Auto-fix Android SDK Version to 34
         run: |
@@ -36,9 +38,6 @@ jobs:
             sed -i 's/compileSdk .*/compileSdk 34/g' android/app/build.gradle || true
             sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
             sed -i 's/targetSdk .*/targetSdk 34/g' android/app/build.gradle || true
-            echo "Android SDK successfully upgraded to 34 in build.gradle"
-          else
-            echo "Custom Android build.gradle not found, skipping inline fix."
           fi
 
       - name: Build APK Release
